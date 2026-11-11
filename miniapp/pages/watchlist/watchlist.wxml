@@ -1,0 +1,55 @@
+<wxs src="/utils/fmt.wxs" module="fmt" />
+<view class="page">
+  <view class="tip">在个股 / ETF 详情页点 ☆ 加入自选 · 自选仅保存在本机 · 长按可移除</view>
+
+  <empty-state
+    wx:if="{{empty && !loading}}"
+    text="还没有自选，去榜单看看吧"
+    actionText="去榜单"
+    bind:action="onGoRank"
+  />
+
+  <block wx:else>
+    <view class="section" wx:if="{{stockItems.length}}">
+      <view class="section-head">
+        <text class="section-title">自选个股</text>
+        <text class="muted">估算净流入（单日）</text>
+      </view>
+      <view
+        class="wl-row"
+        wx:for="{{stockItems}}"
+        wx:key="code"
+        data-type="{{item.type}}"
+        data-code="{{item.code}}"
+        data-name="{{item.name}}"
+        bindlongpress="onLongPress"
+      >
+        <stock-row item="{{item}}" bind:tap="onRowTap" />
+        <switch class="sw" checked="{{item.remind}}" data-type="{{item.type}}" data-code="{{item.code}}" bindchange="onRemindChange" color="#d43c33" />
+      </view>
+    </view>
+
+    <view class="section" wx:if="{{etfItems.length}}">
+      <view class="section-head">
+        <text class="section-title">自选 ETF</text>
+        <text class="muted">当日估算净流入</text>
+      </view>
+      <view
+        class="wl-row"
+        wx:for="{{etfItems}}"
+        wx:key="code"
+        data-type="{{item.type}}"
+        data-code="{{item.code}}"
+        data-name="{{item.name}}"
+        bindlongpress="onLongPress"
+      >
+        <stock-row item="{{item}}" bind:tap="onRowTap" />
+        <switch class="sw" checked="{{item.remind}}" data-type="{{item.type}}" data-code="{{item.code}}" bindchange="onRemindChange" color="#d43c33" />
+      </view>
+    </view>
+
+    <view class="remind-note">提醒说明：订阅消息推送需服务端与模板支持（契约 §2.8 冻结中，随 M2 技术路线接入；个人主体按一次性订阅设计，每用户每日 ≤1 条汇总）。</view>
+  </block>
+
+  <disclosure-bar />
+</view>

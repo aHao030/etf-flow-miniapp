@@ -1,0 +1,32 @@
+.bar {
+  display: flex;
+  align-items: flex-start;
+  margin: 0 24rpx 12rpx;
+  padding: 14rpx 20rpx;
+  background: #f7f8fa;
+  border: 1rpx solid #eceef1;
+  border-radius: 12rpx;
+}
+.tag {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: #b26a00;
+  background: #fff7e6;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+  margin-right: 12rpx;
+  margin-top: 4rpx;
+}
+.txt {
+  flex: 1;
+  font-size: 22rpx;
+  color: #8a919f;
+  line-height: 1.5;
+}
+.info {
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  font-size: 26rpx;
+  color: #8a919f;
+  padding: 0 4rpx;
+}

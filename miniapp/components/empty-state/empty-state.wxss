@@ -1,0 +1,23 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 120rpx 0;
+}
+.icon {
+  font-size: 88rpx;
+  color: #c9cdd4;
+}
+.text {
+  font-size: 26rpx;
+  color: #8a919f;
+  margin-top: 20rpx;
+}
+.action {
+  margin-top: 32rpx;
+  font-size: 26rpx;
+  color: #d43c33;
+  border: 1rpx solid #d43c33;
+  border-radius: 32rpx;
+  padding: 10rpx 40rpx;
+}

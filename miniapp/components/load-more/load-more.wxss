@@ -1,0 +1,9 @@
+.load-more {
+  text-align: center;
+  font-size: 24rpx;
+  color: #8a919f;
+  padding: 28rpx 0 40rpx;
+}
+.error {
+  color: #d43c33;
+}

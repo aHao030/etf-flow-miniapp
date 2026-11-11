@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "miniprogram-compiler": "^0.2.3",
+    "tiny-inflate": "^1.0.3",
+    "xhs-mp-cli": "^2.1.6"
+  }
+}

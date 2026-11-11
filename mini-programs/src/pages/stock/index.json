@@ -1,0 +1,4 @@
+{
+  "navigationBarTitleText": "个股资金与股价",
+  "usingComponents": {"flow-chart": "../../components/flow-chart/index"}
+}

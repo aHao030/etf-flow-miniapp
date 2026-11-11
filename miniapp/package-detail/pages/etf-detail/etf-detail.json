@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "ETF 详情",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "flow-chart": "../../components/flow-chart/flow-chart"
+  }
+}

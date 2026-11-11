@@ -1,0 +1,4 @@
+.copy { margin-top:var(--spacing-2); color:var(--color-text-secondary); line-height:1.65; }
+.panel input, .panel button { margin-top:var(--spacing-2); }
+.version-row { display:flex; align-items:baseline; justify-content:space-between; gap:var(--spacing-2); padding:var(--spacing-2) 0; border-bottom:1rpx solid var(--color-border); }
+.version-value { font-weight:600; text-align:right; overflow-wrap:anywhere; }

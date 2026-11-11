@@ -1,0 +1,60 @@
+.row {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: #ffffff;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.main {
+  flex: 1;
+  min-width: 0;
+}
+.name-line {
+  display: flex;
+  align-items: center;
+}
+.name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.code {
+  font-size: 22rpx;
+  color: #8a919f;
+  margin-left: 10rpx;
+}
+.sub {
+  font-size: 22rpx;
+  color: #646a73;
+  margin-top: 4rpx;
+}
+.right {
+  flex-shrink: 0;
+  text-align: right;
+  margin-left: 16rpx;
+}
+.flow {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.intensity {
+  font-size: 22rpx;
+  margin-top: 2rpx;
+}
+.intensity.up {
+  color: #d43c33;
+}
+.intensity.down {
+  color: #0a9b4b;
+}
+.extra {
+  font-size: 20rpx;
+  color: #8a919f;
+  margin-top: 2rpx;
+}
+.arrow {
+  flex-shrink: 0;
+  color: #c9cdd4;
+  font-size: 36rpx;
+  margin-left: 12rpx;
+}

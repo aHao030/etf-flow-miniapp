@@ -1,0 +1,27 @@
+.page {
+  padding-bottom: 40rpx;
+}
+.para {
+  font-size: 26rpx;
+  color: #4e545c;
+  margin-top: 12rpx;
+  line-height: 1.7;
+}
+.formula {
+  font-size: 24rpx;
+  color: #1f2329;
+  background: #f7f8fa;
+  border-radius: 8rpx;
+  padding: 12rpx 16rpx;
+  margin-top: 12rpx;
+  word-break: break-all;
+}
+.clear-btn {
+  margin-top: 24rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: #d43c33;
+  border: 1rpx solid #d43c33;
+  border-radius: 32rpx;
+  padding: 12rpx 0;
+}

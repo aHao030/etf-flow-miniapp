@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "宽基指数资金观察",
+  "usingComponents": {
+    "flow-chart": "../../components/flow-chart/index"
+  }
+}

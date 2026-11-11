@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "ETF 基金详情",
+  "usingComponents": {
+    "flow-chart": "../../components/flow-chart/index"
+  }
+}

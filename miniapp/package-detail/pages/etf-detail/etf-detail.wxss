@@ -1,0 +1,72 @@
+.page {
+  padding-bottom: 40rpx;
+}
+.head-card {
+  margin-top: 16rpx;
+}
+.head-row {
+  display: flex;
+  align-items: flex-start;
+}
+.head-main {
+  flex: 1;
+  min-width: 0;
+}
+.name-line {
+  display: flex;
+  align-items: baseline;
+}
+.name {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+.code {
+  font-size: 24rpx;
+  color: #8a919f;
+  margin-left: 12rpx;
+}
+.sub-line {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+}
+.sub-line .badge {
+  margin-right: 12rpx;
+}
+.star {
+  flex-shrink: 0;
+  font-size: 48rpx;
+  color: #c9cdd4;
+  padding: 0 8rpx;
+}
+.star.on {
+  color: #f0a020;
+}
+.metric-label {
+  font-size: 22rpx;
+  color: #8a919f;
+}
+.metric-value {
+  font-size: 48rpx;
+  font-weight: 700;
+  margin-top: 6rpx;
+}
+.metric-row {
+  display: flex;
+  margin-top: 24rpx;
+}
+.metric-col {
+  flex: 1;
+}
+.metric-sub {
+  font-size: 26rpx;
+  font-weight: 600;
+  margin-top: 6rpx;
+  color: #1f2329;
+}
+.card-pad {
+  padding: 24rpx 24rpx 8rpx;
+}
+.chips {
+  margin-top: 12rpx;
+}

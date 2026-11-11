@@ -1,0 +1,24 @@
+.graph { background:var(--color-background-body); border-radius:var(--radius-element); padding:var(--spacing-2) var(--spacing-1); overflow:hidden; }
+.read-date, .read-main, .read-other, .help { margin:0 var(--spacing-1); }
+.read-date, .read-other, .axis, .help { color:var(--color-text-secondary); font-size:var(--font-size-sm); }
+.read-date { color:var(--color-text-primary); font-weight:600; }
+.read-main { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; font-size:var(--font-size-sm); gap:var(--spacing-1); }
+.v { font-size:var(--font-size-xl); font-weight:700; overflow-wrap:anywhere; }
+.v.in { color:var(--market-inflow); }
+.v.out { color:var(--market-outflow); }
+/* Drawing dimensions match lib/chart.js. */
+.plot { position:relative; width:580rpx; height:184rpx; margin:var(--spacing-2) auto 0; max-width:100%; }
+.zero, .seg, .dot, .over-dot, .bar, .guide, .hits { position:absolute; }
+.zero { width:100%; border-top:1rpx solid var(--color-border-emphasized); }
+.seg { height:3rpx; background:var(--color-accent); transform-origin:0 50%; z-index:2; }
+.primary { background:var(--color-text-secondary); }
+.dot, .over-dot { width:4rpx; height:4rpx; border-radius:50%; transform:translate(-50%,-50%); background:var(--color-accent); z-index:2; }
+.bar.in { background:var(--market-inflow); }
+.bar.out { background:var(--market-outflow); }
+.bar.neutral { background:var(--color-text-secondary); }
+.guide { top:0; height:100%; border-left:1rpx dashed var(--color-text-secondary); }
+.hits { left:8rpx; right:8rpx; top:0; bottom:0; display:flex; z-index:5; }
+.hit { height:100%; flex:1; }
+.axis { display:flex; justify-content:space-between; width:580rpx; max-width:100%; margin:auto; }
+.help { display:block; }
+.empty { padding:var(--spacing-3); text-align:center; color:var(--color-text-secondary); font-size:var(--font-size-sm); }

@@ -1,0 +1,79 @@
+.row {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 24rpx;
+  background: #ffffff;
+  border-bottom: 1rpx solid #f2f3f5;
+}
+.rank {
+  width: 56rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #8a919f;
+  text-align: center;
+  flex-shrink: 0;
+}
+.rank.top {
+  color: #d43c33;
+}
+.main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 8rpx;
+}
+.name-line {
+  display: flex;
+  align-items: center;
+}
+.name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+.code {
+  font-size: 22rpx;
+  color: #8a919f;
+  margin-left: 10rpx;
+}
+.flag {
+  font-size: 18rpx;
+  color: #b26a00;
+  background: #fff7e6;
+  border-radius: 6rpx;
+  padding: 0 8rpx;
+  margin-left: 10rpx;
+}
+.sub-line {
+  display: flex;
+  align-items: center;
+  margin-top: 6rpx;
+}
+.industry {
+  font-size: 22rpx;
+  color: #646a73;
+}
+.valid {
+  font-size: 20rpx;
+  color: #8a919f;
+  margin-left: 14rpx;
+}
+.right {
+  flex-shrink: 0;
+  text-align: right;
+  margin-left: 16rpx;
+}
+.flow {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.intensity {
+  font-size: 22rpx;
+  margin-top: 4rpx;
+  color: #646a73;
+}
+.intensity.up {
+  color: #d43c33;
+}
+.intensity.down {
+  color: #0a9b4b;
+}

@@ -1,0 +1,12 @@
+<view class="chart-wrap">
+  <block wx:if="{{!empty}}">
+    <view class="chart-box" style="height: {{heightPx}}px;">
+      <ec-canvas id="mychart" canvas-id="flowChart" ec="{{ec}}"></ec-canvas>
+    </view>
+  </block>
+  <view wx:if="{{empty}}" class="chart-empty">暂无序列数据</view>
+  <view class="chart-foot" wx:if="{{footnote}}">
+    <text>{{footnote}}</text>
+    <text class="muted">· 点按图表查看数值</text>
+  </view>
+</view>

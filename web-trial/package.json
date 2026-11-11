@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/worker.test.mjs tests/history-worker.test.mjs tests/broad-worker.test.mjs tests/market-worker.test.mjs tests/prices-worker.test.mjs tests/ui-history.mjs tests/ui-history-charts.mjs tests/ui-interactions.mjs tests/ui-refresh.mjs tests/ui-chart.mjs tests/chart-values.test.mjs tests/ui-broad.mjs tests/money-unit.test.mjs tests/ui-stock-price.mjs tests/ui-price-history.mjs",
+    "preview": "node scripts/preview.mjs"
+  },
+  "dependencies": {
+    "@astryxdesign/core": "0.7.13",
+    "@astryxdesign/theme-neutral": "0.7.13",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@astryxdesign/cli": "0.7.13",
+    "parse5": "8.1.1"
+  },
+  "engines": {
+    "node": ">=22.15.0"
+  }
+}

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>ETF 资金观察</title>
+  <link rel="stylesheet" href="/astryx.css">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <template id="market-workspace">
+    <section id="broad-view" aria-labelledby="broad-title">
+      <div class="history-intro page-intro">
+        <div><h1 id="broad-title">宽基指数资金观察</h1>
+          <nav id="broad-section-links" class="section-links" aria-label="本页内容">
+            <a href="#broad-heading">资金走势</a><a href="#broad-list-title">场内 ETF</a><a href="#broad-offshore-title">场外申赎</a><a href="#broad-daily-heading">逐日明细</a>
+          </nav>
+        </div>
+        <div id="broad-asof" class="history-asof" aria-live="polite">正在读取数据日期…</div>
+      </div>
+      <section class="panel broad-workspace" aria-label="指数资金与走势">
+        <div class="broad-filter-bar" role="group" aria-label="指数与时间范围">
+          <label class="broad-field index-field" for="broad-index">监测指数<select id="broad-index"><option>正在读取指数…</option></select></label>
+          <div class="broad-date-range" role="group" aria-label="宽基日期范围"><label for="broad-start">开始日期<input id="broad-start" type="date" aria-describedby="broad-status"></label><label for="broad-end">结束日期<input id="broad-end" type="date" aria-describedby="broad-status"></label><button id="broad-apply" type="button" aria-label="应用日期范围">应用</button></div>
+        </div>
+        <div id="broad-status" class="inline-state broad-range-state" aria-live="polite"></div>
+        <div id="broad-toolbar" class="broad-toolbar-host"></div>
+        <div class="broad-overview">
+          <div id="broad-total" class="broad-total" aria-live="polite"><div class="broad-total-main"><h2>所选指数 · 期间估算净申赎小计</h2><strong class="broad-total-value">—</strong></div><div class="broad-total-context"><p>正在读取所选期间。</p></div></div>
+          <div id="broad-summary" class="history-summary" aria-live="polite"></div>
+        </div>
+        <div class="section-heading chart-heading"><div><h2 id="broad-heading" tabindex="-1">指数整体资金与走势</h2><p id="broad-subtitle"></p></div><div class="chart-actions"><button id="broad-return-index" type="button" class="outline-button" hidden>返回指数整体</button><button id="broad-open-history" class="outline-button" disabled>查看所属 ETF</button></div></div>
+        <p id="broad-selection-state" class="note selection-state" aria-live="polite"></p>
+        <div class="chart-context"><p id="broad-index-quote" class="broad-index-quote"></p><p id="broad-legend" class="note">红色流入，绿色流出；黑线为指数走势。</p></div>
+        <div id="broad-chart" class="viz-frame broad-chart" aria-label="宽基 ETF 资金变化图"></div>
+        <div id="broad-chart-state" class="inline-state" aria-live="polite">选择指数以查看整体资金与市场走势。</div>
+        <details class="method-details"><summary>净申赎怎样估算？</summary><p id="broad-notes" class="note"></p></details>
+      </section>
+      <section class="panel data-section broad-members" aria-labelledby="broad-list-title">
+        <div class="section-heading compact"><div><h2 id="broad-list-title" tabindex="-1">所属 ETF 明细</h2><p>期间金额随上方日期变化。选择基金，查看它的资金曲线。</p></div></div>
+        <div class="member-filters"><label class="broad-field" for="broad-search">搜索基金<input id="broad-search" type="search" placeholder="基金名称或代码" maxlength="50"></label><label class="broad-field" for="broad-members-sort">排序<select id="broad-members-sort"><option value="magnitude">金额绝对值从高到低</option><option value="inflow">净流入从高到低</option><option value="outflow">净流出从多到少</option><option value="name">基金名称</option></select></label></div>
+        <div id="broad-list" class="broad-list table-scroll"><table class="broad-members-table" aria-labelledby="broad-list-title"><thead id="broad-members-columns" tabindex="-1"><tr><th scope="col">基金</th><th scope="col" class="num">期间估算净申赎</th><th scope="col">日期覆盖</th><th scope="col" class="num">期末当日估算净申赎</th></tr></thead><tbody id="broad-members-body"></tbody></table></div>
+        <div class="pagination"><button id="broad-members-prev" type="button" class="outline-button" disabled>上一页</button><span id="broad-members-page">第 1 页</span><button id="broad-members-next" type="button" class="outline-button" disabled>下一页</button></div>
+      </section>
+      <details class="panel data-section expandable-section"><summary><h2 id="broad-daily-heading" tabindex="-1">指数每日资金明细</h2><span>逐日核对日期、金额与覆盖</span></summary><p id="broad-daily-state" class="note" aria-live="polite">选择范围后显示逐日明细。</p><div class="table-scroll"><table><thead id="broad-daily-columns" tabindex="-1"><tr><th scope="col">交易日</th><th scope="col">估算净申赎小计</th><th scope="col">完整估算合计</th><th scope="col">可估算 ETF</th><th scope="col">应有 ETF</th><th scope="col">存续区间待核验</th><th scope="col">指数收盘（点）</th></tr></thead><tbody id="broad-daily-body"></tbody></table></div><div class="pagination"><button id="broad-daily-prev" type="button" class="outline-button" disabled>上一页</button><span id="broad-daily-page">第 1 页</span><button id="broad-daily-next" type="button" class="outline-button" disabled>下一页</button></div></details>
+      <details class="panel data-section broad-offshore expandable-section"><summary><h2 id="broad-offshore-title" tabindex="-1">场外指数与联接基金</h2><span>按披露期间查看份额申购与赎回</span></summary><p id="broad-offshore-state" class="note">场内外不可直接相加：披露频率不同，联接基金可能与 ETF 重复计入。</p><div id="broad-offshore-table" class="table-scroll"></div></details>
+    </section>
+    <section id="history-view" class="history-drilldown" aria-labelledby="history-heading" hidden>
+      <button id="history-back" type="button" class="text-button history-back">← 返回宽基指数</button>
+      <div class="history-intro">
+        <div>
+          <h1 id="history-heading">ETF 历史详情</h1>
+          <p class="intro-copy">查看所选基金的历史份额、净值与可核验的净申赎。</p>
+        </div>
+        <div class="history-asof" id="history-asof" aria-live="polite">正在读取覆盖情况…</div>
+      </div>
+      <details class="disclosure history-disclosure">
+        <summary>查看数据边界</summary>
+        <p>目录覆盖不等于历史数据完整。份额与净值分别展示实际记录范围和数量；缺失显示为 —。ETF 自身净申赎可在数据与事件校验满足条件时估算；历史个股资金分配需要时点持仓，当前未提供。</p>
+      </details>
+      <div class="history-summary" id="history-summary" hidden></div>
+      <details class="method-details"><summary>查看数据说明与快照时间</summary><div class="history-notes" id="history-notes"></div></details>
+      <div class="history-grid">
+        <section class="panel history-catalog" aria-labelledby="catalog-heading" hidden>
+          <div class="section-heading compact"><div><h2 id="catalog-heading" tabindex="-1">ETF 目录</h2><p>搜索基金名称或代码</p></div></div>
+          <div class="history-filters">
+            <label>名称或代码<input id="etf-query" type="search" maxlength="50" autocomplete="off" placeholder="例如 510300"></label>
+            <label>交易所<select id="etf-market"><option value="">沪深全部</option><option value="SH">上海</option><option value="SZ">深圳</option></select></label>
+          </div>
+          <div class="catalog-columns"><span>基金 / 上市状态</span><span>份额 · 净值记录数</span></div>
+          <div id="etf-catalog-list" aria-live="polite"></div>
+          <div class="pagination"><button id="catalog-prev" class="outline-button">上一页</button><span id="catalog-page">第 1 页</span><button id="catalog-next" class="outline-button">下一页</button></div>
+        </section>
+        <section class="panel history-detail" aria-labelledby="history-fund-heading">
+          <div class="section-heading compact"><div><h2 id="history-fund-heading" tabindex="-1">ETF 历史详情</h2><p id="history-fund-subtitle">从指数所属 ETF 明细查看历史数据</p></div></div>
+          <div id="history-detail-status" class="state" aria-live="polite">选择 ETF 后，可按日期查看历史份额和净值。</div>
+          <div id="history-detail-content" hidden>
+            <div class="history-filters date-filters">
+              <label>开始日期<input id="history-start" type="date" min="2004-12-30" value="2004-12-30"></label>
+              <label>结束日期<input id="history-end" type="date" min="2004-12-30"></label>
+              <button id="history-apply" class="outline-button">查看范围</button>
+            </div>
+            <div class="history-coverage" id="history-coverage"></div>
+            <div class="chart-section-header"><div><h3>历史趋势</h3><p>按日期查看已取得的数据</p></div>
+              <div id="history-chart-controls" class="chart-mode" role="group" aria-label="ETF 历史图表指标">
+                <button type="button" data-history-metric="flow" class="active" aria-pressed="true">估算净申赎</button>
+                <button type="button" data-history-metric="nav" aria-pressed="false">单位净值</button>
+                <button type="button" data-history-metric="shares" aria-pressed="false">基金份额</button>
+              </div>
+            </div>
+            <div id="history-chart" class="viz-frame" aria-label="ETF 历史趋势图"></div>
+            <div id="history-chart-state" class="inline-state" aria-live="polite"></div>
+            <details class="method-details"><summary>数据口径与单位</summary><p class="note">份额单位：份；单位净值与累计净值单位：元。— 表示该日期未取得对应记录，并非零。各行包含原始观测及符合条件的 ETF 自身净申赎估算，缺失日期可能未列出；ETF 净申赎并非个股资金分配。</p></details>
+            <div class="table-scroll"><table class="history-table"><thead id="history-rows-heading" tabindex="-1"><tr><th>数据日期</th><th class="num">基金份额</th><th class="num">单位净值</th><th class="num">累计净值</th><th class="num">ETF 估算净申赎</th><th>估算状态</th></tr></thead><tbody id="history-rows"></tbody></table></div>
+            <div id="history-rows-state" class="inline-state" aria-live="polite"></div>
+            <div class="pagination"><button id="history-prev" class="outline-button">上一页</button><span id="history-page">第 1 页</span><button id="history-next" class="outline-button">下一页</button></div>
+            <details class="method-details"><summary>查看历史数据说明</summary><div id="history-detail-notes" class="history-notes"></div></details>
+          </div>
+        </section>
+      </div>
+    </section>
+    <div id="stock-view" hidden>
+    <section class="intro">
+      <div><h1>个股资金与股价</h1><p class="stock-data-date">观察截止 <strong id="trade-date">—</strong><span>数据生成于 <time id="refresh-time">—</time></span></p></div>
+      <div class="search-wrap">
+        <label for="search">股票名称或代码</label>
+        <div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.5 15.5 4 4"></path></svg><input id="search" autocomplete="off" placeholder="例如 宁德时代 / 300750"><button id="clear-search" aria-label="清空搜索">清空</button></div>
+        <div id="search-results" class="search-results" aria-live="polite"></div>
+      </div>
+    </section>
+    <div class="workspace">
+      <section class="panel stock-panel" id="stock-panel" aria-labelledby="stock-heading">
+        <div class="section-heading"><div><h2 id="stock-heading">选择一只股票</h2><p id="stock-subtitle">通过搜索、榜单或自选打开个股详情</p></div><button id="watch-toggle" class="outline-button" hidden>加入自选</button></div>
+        <div id="stock-status" class="state" aria-live="polite">搜索股票名称或代码，开始查看。</div>
+        <div id="stock-content" hidden>
+          <div class="period-control stock-periods" role="group" aria-label="个股周期">
+            <button data-stock-period="1d">单日</button><button data-stock-period="5d">5日</button><button data-stock-period="20d" class="active">20日</button>
+            <button data-stock-period="3m">3个月</button><button data-stock-period="6m">6个月</button><button data-stock-period="1y">1年</button>
+            <button data-stock-period="2y">2年</button><button data-stock-period="3y">3年</button><button data-stock-period="5y">5年</button><button data-stock-period="all">全部历史</button>
+          </div>
+          <div class="metrics"><div class="metric primary"><span>ETF 持仓估算净贡献</span><strong id="stock-net">—</strong><small id="valid-days">有效天数 —</small><small id="stock-latest-observation" hidden></small></div><div class="metric"><span>净流入贡献小计</span><strong id="stock-in">—</strong><small id="in-count">—</small></div><div class="metric"><span>净流出贡献小计</span><strong id="stock-out">—</strong><small id="out-count">—</small></div></div>
+          <p class="stock-reading-note">ETF 贡献按当前持仓权重回溯；缺失不视为零，不能用于历史回测。</p>
+          <div class="subsection-head primary-chart-heading"><div><h3>资金与股价</h3></div>
+            <div id="chart-mode" class="chart-mode" role="group" aria-label="个股图表模式">
+              <button type="button" data-chart-mode="flow" class="active" aria-pressed="true">每日变化</button>
+              <button type="button" data-chart-mode="cumulative" aria-pressed="false">累计变化</button>
+            </div>
+          </div>
+          <div id="chart" class="chart" aria-label="每日估算净流入柱状图"></div>
+          <div class="chart-axis"><span id="chart-start">—</span><span id="chart-end">—</span></div>
+          <p class="note price-legend">红色：资金流入　绿色：资金流出　黑线：不复权收盘价（右轴，元/股）</p>
+          <div id="price-status" class="inline-state" aria-live="polite"></div>
+          <p id="chart-description" class="note">空白表示暂无记录。</p>
+          <p id="window-coverage" class="note"></p>
+          <div id="coverage-visual" class="coverage-visual" aria-label="数据覆盖情况"></div>
+          <p id="observed-total" class="note" hidden></p>
+          <details class="method-details"><summary>查看计算说明</summary><p class="note">按各 ETF 在所选周期的净贡献正负分组。数据不完整时，周期总额可能不展示。</p></details>
+          <details class="series-details"><summary id="series-heading" tabindex="-1">查看每日资金与股价</summary><div class="table-scroll"><table><thead id="series-columns" tabindex="-1"><tr><th>交易日</th><th class="num">估算净流入</th><th class="num">不复权收盘价（元/股）</th></tr></thead><tbody id="series-body"></tbody></table></div><div class="pagination"><button id="series-prev" class="outline-button">上一页</button><span id="series-page">第 1 页</span><button id="series-next" class="outline-button">下一页</button></div></details>
+          <section class="stock-price-history" aria-labelledby="price-history-heading">
+            <div class="subsection-head"><div><h3 id="price-history-heading" tabindex="-1">上市以来股价</h3><p>独立查看上市后的真实收盘记录，ETF 资金仍按原有范围展示。</p></div><button id="price-history-open" type="button" class="outline-button" disabled>查看上市以来</button></div>
+            <div id="price-history-content" hidden>
+              <div class="broad-date-range" role="group" aria-label="独立股价日期范围"><label for="price-history-start">开始日期<input id="price-history-start" type="date" min="1990-01-01"></label><label for="price-history-end">结束日期<input id="price-history-end" type="date" min="1990-01-01"></label><button id="price-history-apply" type="button">查看股价</button></div>
+              <div id="price-history-chart" class="viz-frame" aria-label="上市以来不复权收盘价"></div>
+              <p id="price-history-status" class="inline-state" aria-live="polite"></p>
+              <details class="series-details"><summary id="price-history-rows-heading" tabindex="-1">查看逐日收盘价</summary><div class="table-scroll"><table><thead id="price-history-columns" tabindex="-1"><tr><th>开市日期</th><th class="num">不复权收盘价（元/股）</th></tr></thead><tbody id="price-history-body"></tbody></table></div><div class="pagination"><button id="price-history-prev" type="button" class="outline-button" disabled>上一页</button><span id="price-history-page">第 1 页</span><button id="price-history-next" type="button" class="outline-button" disabled>下一页</button></div></details>
+            </div>
+          </section>
+          <div class="subsection-head"><div><h3 id="stock-etf-heading" tabindex="-1">ETF 来源拆解</h3><p id="stock-coverage">仅显示追踪池内与该股相关的 ETF</p></div><span id="etf-count" class="count"></span></div>
+          <div id="contribution-chart" class="contribution-bars" aria-label="ETF 贡献图"></div>
+          <div class="table-scroll"><table class="contributions"><thead id="stock-etf-columns" tabindex="-1"><tr><th>ETF</th><th class="num">已有记录贡献</th><th class="num">权重</th><th>权重来源 / 日期</th><th>状态</th></tr></thead><tbody id="etf-body"></tbody></table></div>
+          <div class="pagination"><button id="stock-etf-prev" type="button" class="outline-button" disabled>上一页</button><span id="stock-etf-page">第 1 页</span><button id="stock-etf-next" type="button" class="outline-button" disabled>下一页</button></div><div id="etf-state" class="inline-state"></div><div id="etf-detail" class="etf-detail" hidden></div>
+          <details class="method-details"><summary>查看估算方法与数据质量</summary><p id="history-note" class="note"></p><p id="quality-note" class="note"></p></details>
+        </div>
+      </section>
+      <section class="stock-data-notes" aria-label="市场覆盖与采集进度">
+    <details class="disclosure stock-disclosure"><summary>全市场目录与实际披露覆盖</summary><div><span id="coverage">正在读取全市场 ETF 核验状态。</span><span id="disclosure">按已披露持仓估算的贡献小计，非真实买卖资金。</span></div></details>
+    <p id="stock-price-coverage" class="note" aria-live="polite" hidden></p>
+    <details id="market-funds-detail" class="method-details"><summary id="market-funds-heading" tabindex="-1">逐只查看全部 ETF 的核验状态</summary><p id="market-funds-state" class="note"></p><div class="table-scroll"><table><thead id="market-funds-columns" tabindex="-1"><tr><th>ETF</th><th>持仓状态</th><th>报告期末</th><th>已披露 A 股占净值</th><th>A 股数量</th></tr></thead><tbody id="market-funds-body"></tbody></table></div><div class="pagination"><button id="market-funds-prev" class="outline-button">上一页</button><button id="market-funds-next" class="outline-button">下一页</button></div></details>
+      </section>
+      <aside class="sidebar">
+        <section class="panel watch-panel"><div class="section-heading compact"><div><h2>自选股票</h2></div><span id="watch-count" class="count">0</span></div><div id="watch-list" class="watch-list"></div><p class="note">自选仅保存在当前浏览器。</p></section>
+        <section class="panel rank-panel"><div class="section-heading compact"><div><h2 id="rank-heading" tabindex="-1">资金动向榜</h2></div></div>
+          <div class="rank-controls"><div class="period-control" role="group" aria-label="榜单周期"><button data-rank-period="1d" class="active">单日</button><button data-rank-period="5d">5日</button><button data-rank-period="20d">20日</button></div><div class="direction-control" role="group" aria-label="榜单方向"><button data-direction="in" class="active">流入</button><button data-direction="out">流出</button></div></div>
+          <label class="select-label" for="industry">行业</label><select id="industry"><option value="">全部行业</option></select>
+          <p class="note">按已披露持仓的估算贡献排序；缺失未计入，不代表完整周期或实际买卖金额。</p><div class="rank-head"><span>排名 / 股票</span><span>已有贡献小计</span></div><div id="rank-list" aria-live="polite"></div><div class="pagination"><button id="rank-prev" class="outline-button">上一页</button><span id="rank-page">第 1 页</span><button id="rank-next" class="outline-button">下一页</button></div>
+        </section>
+      </aside>
+    </div>
+    </div>
+    <footer><p>交易日 15:30 检查，19:30 / 22:30 补抓；数据可用时间取决于上游披露与任务结果。</p><p>个股观察页的历史估算按当前权重回溯，可能使用当时尚未披露的信息，不适用于历史策略回测。仅供研究参考，不构成投资建议。</p></footer>
+  </template>
+  <script type="module" src="/app.mjs"></script>
+  <script type="module" src="/history.mjs"></script>
+  <script type="module" src="/broad.mjs"></script>
+</body></html>

@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "个股详情",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "flow-chart": "../../components/flow-chart/flow-chart"
+  }
+}

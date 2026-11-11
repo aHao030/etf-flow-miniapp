@@ -1,0 +1,48 @@
+// utils/fmt.wxs —— WXML 模板内格式化（与 utils/format.js 口径一致，避免列表重复格式化）
+var money = function (v) {
+  if (v === null || v === undefined) return '—';
+  var n = getNumber(v);
+  if (isNaN(n)) return '—';
+  var sign = n > 0 ? '+' : '';
+  var abs = Math.abs(n);
+  if (abs >= 100000000) return sign + (n / 100000000).toFixed(2) + '亿';
+  if (abs >= 10000) return sign + (n / 10000).toFixed(2) + '万';
+  return sign + n.toFixed(0) + '元';
+};
+
+var share = function (v) {
+  if (v === null || v === undefined) return '—';
+  return (getNumber(v) / 100000000).toFixed(2) + '亿份';
+};
+
+var mcap = function (v) {
+  if (v === null || v === undefined) return '—';
+  return (getNumber(v) / 100000000).toFixed(0) + '亿';
+};
+
+var intensity = function (v) {
+  if (v === null || v === undefined) return '—';
+  var n = getNumber(v);
+  var sign = n > 0 ? '+' : '';
+  return sign + n.toFixed(2) + 'bp';
+};
+
+var cls = function (v) {
+  if (v === null || v === undefined) return 'flat';
+  var n = getNumber(v);
+  if (n > 0) return 'up';
+  if (n < 0) return 'down';
+  return 'flat';
+};
+
+function getNumber(v) {
+  return typeof v === 'number' ? v : parseFloat(v);
+}
+
+module.exports = {
+  money: money,
+  share: share,
+  mcap: mcap,
+  intensity: intensity,
+  cls: cls
+};

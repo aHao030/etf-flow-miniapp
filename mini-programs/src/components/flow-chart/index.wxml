@@ -1,0 +1,23 @@
+<view class="graph" wx:if="{{model && model.hasData}}">
+  <view class="read-date">{{point.date}}</view>
+  <view class="read-main"><text>{{model.label}}</text><text class="v {{point.tone}}">{{point.amount}}</text></view>
+  <view wx:if="{{model.overlayLabel}}" class="read-other">{{model.overlayLabel}}　{{point.overlayText}} <text wx:if="{{model.grouped && point.overlayDate}}">（{{point.overlayDate}}）</text></view>
+  <view wx:if="{{point.coverage}}" class="read-other">{{point.coverage}}</view>
+  <view class="plot">
+    <view wx:if="{{model.zero !== null}}" class="zero" style="top:{{model.zero}}rpx"></view>
+    <view wx:for="{{model.segments}}" wx:key="key" class="seg {{item.kind}}" style="{{item.style}}"></view>
+    <block wx:for="{{model.points}}" wx:key="key">
+      <view wx:if="{{item.bar}}" class="bar {{item.tone}}" style="{{item.rect}}"></view>
+      <view wx:if="{{item.dot}}" class="dot" style="{{item.dotStyle}}"></view>
+      <view wx:if="{{item.overDot}}" class="over-dot" style="{{item.overStyle}}"></view>
+    </block>
+    <view wx:if="{{point}}" class="guide" style="left:{{point.x}}rpx"></view>
+    <view class="hits"><view wx:for="{{model.points}}" wx:key="key" class="hit" data-index="{{item.i}}" bindtap="select"></view></view>
+  </view>
+  <view class="axis"><text>{{model.first}}</text><text>{{model.last}}</text></view>
+  <view class="read-other" wx:if="{{model.mainScale}}">{{model.label}}范围　{{model.mainScale}}</view>
+  <view class="read-other" wx:if="{{model.overlayScale}}">黑线独立刻度　{{model.overlayLabel}} {{model.overlayScale}}</view>
+  <slider wx:if="{{model.max > 0}}" min="0" max="{{model.max}}" value="{{index}}" step="1" block-size="16" activeColor="var(--color-accent)" backgroundColor="var(--color-track)" bindchanging="select" bindchange="select"/>
+  <text class="help">{{model.action}}</text>
+</view>
+<view wx:else class="empty">所选区间暂无可绘制记录</view>

@@ -1,0 +1,19 @@
+.chart-wrap {
+  width: 100%;
+}
+.chart-box {
+  width: 100%;
+}
+.chart-empty {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #8a919f;
+}
+.chart-foot {
+  font-size: 20rpx;
+  color: #8a919f;
+  padding: 0 12rpx 8rpx;
+}

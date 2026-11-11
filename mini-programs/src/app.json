@@ -1,0 +1,46 @@
+{
+  "pages": [
+    "pages/broad/index",
+    "pages/stock/index",
+    "pages/fund/index",
+    "pages/about/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "ETF 资金观察",
+    "navigationBarBackgroundColor": "var(--color-background-surface)",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "var(--color-background-body)"
+  },
+  "tabBar": {
+    "color": "var(--color-text-secondary)",
+    "selectedColor": "var(--color-accent)",
+    "backgroundColor": "var(--color-background-surface)",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/broad/index",
+        "text": "宽基观察",
+        "iconPath": "assets/broad.png",
+        "selectedIconPath": "assets/broad-active.png"
+      },
+      {
+        "pagePath": "pages/stock/index",
+        "text": "个股观察",
+        "iconPath": "assets/stock.png",
+        "selectedIconPath": "assets/stock-active.png"
+      },
+      {
+        "pagePath": "pages/about/index",
+        "text": "数据说明",
+        "iconPath": "assets/about.png",
+        "selectedIconPath": "assets/about-active.png"
+      }
+    ]
+  },
+  "usingComponents": {
+    "source-note": "/components/source-note/index"
+  },
+  "networkTimeout": {
+    "request": 30000
+  }
+}

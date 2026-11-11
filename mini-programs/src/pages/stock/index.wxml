@@ -1,0 +1,82 @@
+<view class="page stock-page">
+  <block wx:if="{{view === 'search'}}">
+    <view class="title">个股资金与股价</view>
+    <source-note />
+    <view class="panel stack">
+      <view class="section-title">查找股票</view>
+      <view class="stock-search">
+        <input class="stock-input" value="{{query}}" maxlength="50" confirm-type="search" placeholder="例如 宁德时代 / 300750" bindinput="inputSearch" bindconfirm="submitSearch" />
+        <button class="stock-text-button" wx:if="{{query}}" bindtap="clearSearch">清空</button>
+        <button class="button" bindtap="submitSearch">搜索</button>
+      </view>
+      <view class="muted" wx:if="{{searchState === 'loading'}}">正在查询股票目录…</view>
+      <view wx:if="{{searchState === 'error'}}" class="stock-message"><text>{{searchMessage}}</text><button class="stock-text-button" bindtap="submitSearch">重试</button></view>
+      <view wx:if="{{searchState === 'empty'}}" class="muted">没有匹配的股票，请核对代码或名称。</view>
+      <block wx:if="{{searchState === 'ready'}}">
+        <button class="stock-result" wx:for="{{searchRows}}" wx:key="code" data-code="{{item.code}}" bindtap="chooseStock"><text>{{item.name}}</text><text class="muted">{{item.code}} ›</text></button>
+        <view class="stock-pager"><button disabled="{{searchPage === 1}}" data-value="-1" bindtap="changeSearchPage">上一页</button><text>第 {{searchPage}} 页</text><button disabled="{{!searchMore}}" data-value="1" bindtap="changeSearchPage">下一页</button></view>
+      </block>
+    </view>
+    <view class="panel stack" wx:if="{{sampleStocks.length}}"><view class="section-title">快照中可直接查看</view>
+      <button class="stock-result" wx:for="{{sampleStocks}}" wx:key="code" data-code="{{item.code}}" bindtap="chooseStock"><text>{{item.name}}</text><text class="muted">{{item.code}} ›</text></button>
+    </view>
+    <view class="panel stack"><view class="section-title">我的自选</view>
+      <view wx:if="{{!watch.length}}" class="muted">打开一只股票后，点“加入自选”即可保存在此设备。</view>
+      <button class="stock-result" wx:for="{{watch}}" wx:key="code" data-code="{{item.code}}" bindtap="chooseStock"><text>{{item.name}}</text><text class="muted">{{item.code}} ›</text></button>
+    </view>
+  </block>
+  <block wx:else>
+    <view class="row"><button class="stock-back" bindtap="backToSearch">‹ 返回股票搜索 / 自选</button><button wx:if="{{state === 'ready'}}" class="stock-text-button" bindtap="retryStock">刷新个股</button></view>
+    <view class="stock-summary-head"><view><view class="title">{{name}}</view><view class="muted">{{code}}</view></view>
+      <button class="stock-outline" wx:if="{{state === 'ready'}}" bindtap="toggleWatch">{{watched ? '移出自选' : '加入自选'}}</button>
+    </view>
+    <source-note />
+    <view wx:if="{{watchError}}" class="stock-message">{{watchError}}</view>
+    <view wx:if="{{state === 'loading'}}" class="panel muted">正在读取个股数据…</view>
+    <view wx:if="{{state === 'error'}}" class="panel stack"><text>{{error}}</text><button class="button" bindtap="retryStock">重新读取</button></view>
+    <block wx:if="{{state === 'ready'}}">
+      <view class="panel stack">
+        <view class="metric-label">已披露 ETF 持仓贡献小计</view>
+        <view class="amount stock-net {{netClass}}">{{net}}</view><view>{{windowText}}</view>
+        <view class="chips"><button wx:for="{{periods}}" wx:key="key" class="chip {{period === item.key ? 'active' : ''}}" data-value="{{item.key}}" bindtap="choosePeriod">{{item.label}}</button></view>
+        <view class="muted">{{coverageText}}</view>
+        <view wx:if="{{missingNote}}" class="stock-message">{{missingNote}}</view>
+      </view>
+      <view class="panel stack">
+        <view class="section-title">资金与股价</view>
+        <view class="stock-units"><text class="muted">资金单位</text><view class="chips"><button wx:for="{{units}}" wx:key="key" data-value="{{item.key}}" class="chip {{unit === item.key ? 'active' : ''}}" bindtap="chooseUnit">{{item.label}}</button></view></view>
+        <flow-chart wx:if="{{chart}}" model="{{chart}}" />
+        <view class="muted">{{priceNote}}</view><button wx:if="{{priceState === 'error'}}" class="stock-text-button" bindtap="loadOverlay">重试收盘价</button>
+        <view class="muted">ETF 贡献按披露持仓权重回溯。缺少估算或价格的日期留空。</view>
+        <button class="stock-outline" bindtap="toggleDaily">{{dailyOpen ? '收起逐日数据' : '查看逐日资金与股价'}}</button>
+        <block wx:if="{{dailyOpen}}"><view class="stock-grid stock-columns"><text>交易日</text><text>估算贡献</text><text>收盘价（元/股）</text></view>
+          <view class="stock-grid" wx:for="{{daily.items}}" wx:key="date"><text>{{item.date}}</text><text class="{{item.tone}}">{{item.amount}}</text><text>{{item.close}}</text></view>
+          <view class="stock-pager"><button disabled="{{daily.current === 1}}" data-value="-1" bindtap="changeDaily">上一页</button><text>{{daily.current}} / {{daily.pages}}</text><button disabled="{{daily.current === daily.pages}}" data-value="1" bindtap="changeDaily">下一页</button></view>
+        </block>
+      </view>
+      <view class="panel stack">
+        <view class="section-title">ETF 来源</view><view class="muted">按贡献绝对值排列 · 展示 {{top.length}} / {{validFundCount}} 只有金额记录的基金</view>
+        <view wx:if="{{!top.length}}" class="muted">本期暂无可估算的 ETF 贡献。</view>
+        <button class="stock-source" wx:for="{{top}}" wx:key="code" data-code="{{item.code}}" bindtap="openFund"><view class="stock-between"><text>{{item.name}} {{item.code}}</text><text class="{{item.tone}}">{{item.amount}}</text></view><view class="stock-track"><view class="stock-bar {{item.tone}}" style="width:{{item.width}}%;"></view></view></button>
+        <button wx:if="{{fundCount}}" class="stock-outline" bindtap="toggleFunds">{{fullOpen ? '收起完整明细' : '查看全部 ETF 明细'}}（{{fundCount}} 只）</button>
+        <block wx:if="{{fullOpen}}"><button wx:for="{{funds.items}}" wx:key="code" class="stock-source" data-code="{{item.code}}" bindtap="openFund"><view class="stock-between"><text>{{item.name}} {{item.code}}</text><text class="{{item.tone}}">{{item.amount}}</text></view><view class="muted">披露权重 {{item.weight}} · {{item.weightDate}} · 有效 {{item.validDays}} 日 ›</view></button>
+          <view class="stock-pager"><button disabled="{{funds.current === 1}}" data-value="-1" bindtap="changeFunds">上一页</button><text>{{funds.current}} / {{funds.pages}}</text><button disabled="{{funds.current === funds.pages}}" data-value="1" bindtap="changeFunds">下一页</button></view>
+        </block>
+      </view>
+      <view class="panel stack">
+        <view class="section-title">上市以来股价</view>
+        <view class="muted" wx:if="{{listed}}">已核验上市日 {{listed}} · 目标日 {{asOf}}</view>
+        <view class="muted" wx:else>上市日待核验，可查询 1990 年起的实际价格记录。</view>
+        <button wx:if="{{!lifeOpen}}" class="stock-outline" bindtap="openLife">查看上市以来收盘价</button>
+        <block wx:if="{{lifeOpen}}"><view class="stock-dates"><picker mode="date" value="{{lifeFrom}}" start="{{lifeMin}}" end="{{asOf}}" data-field="lifeFrom" bindchange="setLifeDate"><view class="stock-date"><text class="muted">开始日期</text><text>{{lifeFrom}}</text></view></picker><picker mode="date" value="{{lifeTo}}" start="{{lifeMin}}" end="{{asOf}}" data-field="lifeTo" bindchange="setLifeDate"><view class="stock-date"><text class="muted">结束日期</text><text>{{lifeTo}}</text></view></picker></view>
+          <button class="stock-outline" disabled="{{lifeState === 'loading'}}" bindtap="loadLife">应用股价范围</button>
+          <flow-chart wx:if="{{lifeChart}}" model="{{lifeChart}}"/><view class="muted">{{lifeNote}}</view>
+          <block wx:if="{{lifeState === 'ready'}}"><view class="muted">不复权收盘价可能因除权除息跳变。</view><button class="stock-outline" bindtap="toggleLifeDaily">{{lifeDailyOpen ? '收起逐日收盘价' : '查看逐日收盘价'}}</button></block>
+          <block wx:if="{{lifeDailyOpen}}"><view class="stock-between stock-columns"><text>交易日</text><text>收盘价（元/股）</text></view><view class="stock-between" wx:for="{{lifeDaily.items}}" wx:key="date"><text>{{item.date}}</text><text>{{item.close}}</text></view>
+            <view class="stock-pager"><button disabled="{{lifeDaily.current === 1}}" data-value="-1" bindtap="changeLifeDaily">上一页</button><text>{{lifeDaily.current}} / {{lifeDaily.pages}}</text><button disabled="{{lifeDaily.current === lifeDaily.pages}}" data-value="1" bindtap="changeLifeDaily">下一页</button></view>
+          </block><button class="stock-text-button" bindtap="closeLife">收起股价历史</button>
+        </block>
+      </view>
+    </block>
+  </block>
+</view>

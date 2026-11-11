@@ -1,0 +1,19 @@
+<wxs src="/utils/fmt.wxs" module="fmt" />
+<view class="row" bindtap="onTap">
+  <view class="rank {{item.rank <= 3 ? 'top' : ''}}">{{item.rank}}</view>
+  <view class="main">
+    <view class="name-line">
+      <text class="name">{{item.stock_name}}</text>
+      <text class="code">{{item.stock_code}}</text>
+      <text class="flag" wx:for="{{flagLabels}}" wx:key="*this">{{item}}</text>
+    </view>
+    <view class="sub-line">
+      <text class="industry">{{item.industry_name}}</text>
+      <text class="valid">有效 {{item.valid_days}}</text>
+    </view>
+  </view>
+  <view class="right">
+    <view class="flow {{fmt.cls(item.flow)}}">{{fmt.money(item.flow)}}</view>
+    <view class="intensity {{fmt.cls(item.intensity_bp)}}">强度 {{fmt.intensity(item.intensity_bp)}}</view>
+  </view>
+</view>

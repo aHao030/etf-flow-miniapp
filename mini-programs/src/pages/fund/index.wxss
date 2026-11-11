@@ -1,0 +1,18 @@
+.fund-head, .fund-detail-head, .fund-key-value, .fund-pager { display:flex; align-items:center; justify-content:space-between; gap:var(--spacing-2); }
+.fund-name { flex:1; min-width:0; }
+.fund-name .title, .fund-code, .fund-note, .fund-summary text { display:block; }
+.fund-code { margin-top:var(--spacing-0-5); color:var(--color-text-secondary); }
+.fund-filter { margin-top:var(--spacing-3); }
+.fund-back, .fund-dates .button, .fund-detail-head .button, .fund-pager .button { flex:none; }
+.fund-dates { display:flex; align-items:flex-end; gap:var(--spacing-1); }
+.fund-dates picker { flex:1; min-width:0; }
+.fund-date { min-height:var(--touch-min); background:var(--color-background-surface); border:1rpx solid var(--color-border-emphasized); border-radius:var(--radius-element); padding:var(--spacing-1-5); }
+.fund-date text { display:block; font-size:var(--font-size-sm); }
+.fund-note { margin-top:var(--spacing-1); line-height:1.55; font-size:var(--font-size-sm); }
+.fund-metrics, .fund-summary, .fund-pager { margin-top:var(--spacing-3); }
+.fund-summary .amount { margin-top:var(--spacing-1); }
+.fund-state .button { margin:var(--spacing-2) 0 0; }
+.fund-record { padding:var(--spacing-2) 0; margin-top:var(--spacing-2); border-top:1rpx solid var(--color-border); }
+.fund-record-date { font-weight:600; }
+.fund-key-value { margin-top:var(--spacing-1); }
+.fund-key-value text + text { text-align:right; overflow-wrap:anywhere; }

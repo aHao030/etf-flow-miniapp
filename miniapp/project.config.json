@@ -1,0 +1,21 @@
+{
+  "compileType": "miniprogram",
+  "libVersion": "3.0.0",
+  "appid": "touristappid",
+  "projectname": "etf-flow-miniapp",
+  "setting": {
+    "es6": true,
+    "postcss": true,
+    "minified": false,
+    "urlCheck": false,
+    "enhance": true,
+    "coverView": true,
+    "ignoreUploadUnusedFiles": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "condition": {}
+}

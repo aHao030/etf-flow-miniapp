@@ -1,0 +1,27 @@
+page {
+  background: var(--color-background-body);
+  color: var(--color-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: var(--font-size-base);
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+}
+view, button, input, picker, scroll-view { box-sizing: border-box; }
+.page { padding: var(--spacing-6) var(--spacing-4) var(--spacing-8); }
+.panel { padding: var(--spacing-3); margin-top: var(--spacing-4); border-radius: var(--radius-container); background: var(--color-background-surface); border: 1rpx solid var(--color-border); }
+.title { font-size: var(--font-size-2xl); font-weight: 700; line-height: 1.2; }
+.section-title { font-size: var(--font-size-lg); font-weight: 600; line-height: 1.36; }
+.muted, .metric-label { color: var(--color-text-secondary); font-size: var(--font-size-sm); }
+.metric-label { font-weight: 600; }
+.amount { font-size: var(--font-size-3xl); font-weight: 700; line-height: 1.22; overflow-wrap: anywhere; }
+.pos { color: var(--market-inflow); }
+.neg { color: var(--market-outflow); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-1); }
+.stack { display: flex; flex-direction: column; gap: var(--spacing-2); }
+button { margin: 0; min-height: var(--touch-min); padding: var(--spacing-1-5) var(--spacing-2); border-radius: var(--radius-element); background: var(--color-background-muted); color: var(--color-text-primary); font-size: var(--font-size-base); font-weight: 500; line-height: 1.5; }
+button::after { border: 0; }
+button[disabled] { opacity: .55; }
+button.button, .chip.active { background: var(--color-accent); color: var(--color-on-accent); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--spacing-1); }
+.chip { margin: 0; padding: var(--spacing-1) var(--spacing-2); font-size: var(--font-size-sm); }
+input { height: var(--touch-min); padding: var(--spacing-1) var(--spacing-2); border-radius: var(--radius-element); border: 1rpx solid var(--color-border-emphasized); background: var(--color-background-surface); }

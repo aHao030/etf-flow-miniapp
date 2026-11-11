@@ -1,0 +1,76 @@
+<wxs src="/utils/fmt.wxs" module="fmt" />
+<view class="page">
+  <!-- 深市份额积累提示（契约 §2.1 szse_accumulating） -->
+  <view class="notice-bar" wx:if="{{szseAccumulating}}">深市 ETF 份额历史积累中：深市 ETF 贡献暂缺，沪深个股均可能受影响，口径见 ⓘ 说明</view>
+
+  <view class="notice-bar" wx:if="{{isMock}}">演示模式：以下数值为模拟数据</view>
+  <view class="header">
+    <view class="title">ETF 资金动向</view>
+    <view class="sub">数据截至 {{tradeDate || '—'}} · 每日盘后 T+1 更新</view>
+    <view class="search-box"><input value="{{query}}" placeholder="搜索股票名称或代码" bindinput="onSearchInput" confirm-type="search" /></view>
+    <view class="coverage" wx:if="{{coverage}}">当前跟踪 {{coverage.tracked_etfs}} 只 ETF，已纳入计算 {{coverage.active_etfs}} 只，待纳入 {{coverage.pending_etfs}} 只；并非全市场。</view>
+    <view class="tabs" wx:if="{{!query}}">
+      <view
+        wx:for="{{periods}}"
+        wx:key="key"
+        class="tab {{period === item.key ? 'on' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="onPeriodTap"
+      >{{item.label}}</view>
+    </view>
+    <view class="tabs" wx:if="{{!query}}">
+      <view class="tab {{direction === 'in' ? 'on' : ''}}" data-key="in" bindtap="onDirectionTap">净流入</view>
+      <view class="tab {{direction === 'out' ? 'on' : ''}}" data-key="out" bindtap="onDirectionTap">净流出</view>
+    </view>
+    <picker wx:if="{{!query}}" mode="selector" range="{{industries}}" range-key="industry_name" bindchange="onIndustryChange">
+      <view class="filter">
+        <text>{{industries[industryIndex].industry_name}}</text>
+        <text class="caret">▾</text>
+      </view>
+    </picker>
+  </view>
+
+  <disclosure-bar />
+  <block wx:if="{{query}}">
+    <view class="col-head"><text>搜索结果</text><text>单日估算净流入</text></view>
+    <view class="search-result" wx:for="{{searchItems}}" wx:key="stock_code"
+      data-code="{{item.stock_code}}" bindtap="onSearchItemTap">
+      <view>
+        <view>{{item.stock_name}} <text class="muted">{{item.stock_code}}</text></view>
+        <view class="muted">{{item.industry_name || '未分类'}} · {{item.data_status === 'no_data' ? '当前ETF池未覆盖' : '查看详情'}}</view>
+      </view>
+      <text class="{{fmt.cls(item.flow_1d)}}">{{fmt.money(item.flow_1d)}}</text>
+    </view>
+    <view class="search-state" wx:if="{{searchLoading}}">搜索中…</view>
+    <view class="search-state" wx:elif="{{searchError}}" bindtap="onSearchRetry">{{searchError}}，点击重试</view>
+    <view class="search-state" wx:elif="{{searchItems.length === 0}}">未找到匹配的股票</view>
+    <view class="search-state" wx:elif="{{searchHasMore}}">上滑加载更多</view>
+  </block>
+  <block wx:else>
+  <view class="col-head">
+    <text class="c1">排名 · 股票</text>
+    <text class="c2">{{direction === 'out' ? '估算净流出' : '估算净流入'}}</text>
+  </view>
+
+  <!-- 骨架屏 -->
+  <block wx:if="{{loading && items.length === 0}}">
+    <view class="skeleton-row" wx:for="{{[1,2,3,4,5,6]}}" wx:key="*this">
+      <view class="skeleton-line"></view>
+      <view class="skeleton-line" style="width: 60%;"></view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <rank-item wx:for="{{items}}" wx:key="stock_code" item="{{item}}" bind:tap="onItemTap" />
+    <empty-state
+      wx:if="{{items.length === 0 && !loading}}"
+      text="{{error || '该筛选条件下暂无数据'}}"
+      actionText="{{error ? '点击重试' : ''}}"
+      bind:action="onRetry"
+    />
+    <view bindtap="onRetry"><load-more status="{{loadMoreStatus}}" /></view>
+  </block>
+
+  </block>
+  <view class="footer-note">榜单仅按「估算净流入」或「估算净流出」排序陈述事实，不构成任何投资建议</view>
+</view>

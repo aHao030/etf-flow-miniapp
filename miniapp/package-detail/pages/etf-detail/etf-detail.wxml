@@ -1,0 +1,103 @@
+<wxs src="/utils/fmt.wxs" module="fmt" />
+<view class="page">
+  <block wx:if="{{!loading}}">
+    <view class="notice-bar notice-bar-info" wx:if="{{note}}">{{note}}</view>
+
+    <!-- 头部 -->
+    <view class="card head-card">
+      <view class="head-row">
+        <view class="head-main">
+          <view class="name-line">
+            <text class="name">{{name}}</text>
+            <text class="code">{{code}}</text>
+          </view>
+          <view class="sub-line">
+            <text class="badge badge-index">{{exchangeLabel}}</text>
+            <text class="badge badge-quarter">{{category}}</text>
+          </view>
+        </view>
+        <view class="star {{isWatched ? 'on' : ''}}" bindtap="onToggleWatch">{{isWatched ? '★' : '☆'}}</view>
+      </view>
+      <view class="muted" style="margin-top: 8rpx;">数据截至 {{tradeDate}} · 盘后 T+1</view>
+    </view>
+
+    <!-- 核心指标 -->
+    <view class="card">
+      <view class="metric">
+        <view class="metric-label">当日估算净流入（Δ份额 × NAV(t−1)）</view>
+        <view class="metric-value {{fmt.cls(estFlow)}}">{{fmt.money(estFlow)}}</view>
+      </view>
+      <view class="metric-row">
+        <view class="metric-col">
+          <view class="metric-label">最新份额</view>
+          <view class="metric-sub">{{fmt.share(shareTotal)}}</view>
+        </view>
+        <view class="metric-col">
+          <view class="metric-label">Δ份额（当日）</view>
+          <view class="metric-sub {{fmt.cls(shareChange)}}">{{fmt.share(shareChange)}}</view>
+        </view>
+        <view class="metric-col">
+          <view class="metric-label">NAV(t−1)</view>
+          <view class="metric-sub">{{navPrev}} 元</view>
+        </view>
+      </view>
+      <view class="muted" style="margin-top: 16rpx;">
+        权重来源：<text class="badge {{weightSourceBadge}}">{{weightSourceLabel}}</text> · 权重日 {{weightDate}}<text wx:if="{{coverageText}}"> · 覆盖率 {{coverageText}}</text>
+      </view>
+      <view class="chips" wx:if="{{flagLabels.length}}" style="margin-top: 12rpx;">
+        <text class="chip chip-warn" wx:for="{{flagLabels}}" wx:key="*this">{{item}}</text>
+      </view>
+    </view>
+
+    <!-- 份额变化序列 -->
+    <view class="card">
+      <view class="section-title">份额变化序列（近 60 交易日）</view>
+      <flow-chart
+        series="{{shareSeries}}"
+        seriesKey="share_change"
+        chartType="bar"
+        seriesName="Δ份额"
+        unitText="亿份"
+        unitDiv="{{100000000}}"
+        footnote="柱：Δ份额（份 → 亿份显示，红增/绿减）"
+      />
+    </view>
+
+    <!-- 规模走势 -->
+    <view class="card">
+      <view class="section-title">规模走势（份额 × 单位净值）</view>
+      <flow-chart
+        series="{{scaleSeries}}"
+        seriesKey="scale"
+        chartType="line"
+        seriesName="估算规模"
+        unitText="亿元"
+        unitDiv="{{100000000}}"
+        footnote="线：估算规模（份额×NAV，元 → 亿元显示）"
+      />
+    </view>
+
+    <!-- 对成分股影响 -->
+    <view class="card" style="padding: 0; overflow: hidden;">
+      <view class="card-pad">
+        <view class="section-title">对成分股的影响 TOP{{topStocks.length}}</view>
+        <view class="muted">本 ETF 当日申赎对各成分股的估算贡献</view>
+      </view>
+      <stock-row wx:for="{{topStocks}}" wx:key="code" item="{{item}}" bind:tap="onStockTap" />
+      <view class="muted card-pad" wx:if="{{topStocks.length === 0}}">深市份额积累中，暂无成分股贡献数据</view>
+    </view>
+
+    <disclosure-bar />
+  </block>
+
+  <block wx:if="{{loading}}">
+    <view class="skeleton-row" wx:for="{{[1,2,3,4]}}" wx:key="*this">
+      <view class="skeleton-line"></view>
+      <view class="skeleton-line" style="width: 60%;"></view>
+    </view>
+  </block>
+
+  <block wx:if="{{error}}">
+    <empty-state text="{{error}}" actionText="点击重试" bind:action="onRetry" />
+  </block>
+</view>

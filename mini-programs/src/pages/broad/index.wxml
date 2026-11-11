@@ -1,0 +1,113 @@
+<view class="page broad-page">
+  <view class="b-head">
+    <view><view class="title">宽基指数观察</view><source-note target="{{maxDate}}" /></view>
+    <button class="b-quiet" size="mini" bindtap="refresh" disabled="{{busy}}">刷新</button>
+  </view>
+  <view wx:if="{{indexNames.length}}" class="b-filters">
+    <view class="b-top-controls">
+      <picker range="{{indexNames}}" value="{{indexChoice}}" disabled="{{catalogBusy}}" bindchange="changeIndex">
+        <view class="b-picker b-selected"><text>{{indexName}}</text><text class="b-arrow">切换指数 ▾</text></view>
+      </picker>
+      <button class="b-quiet" bindtap="toggleDateFilters">{{dateFiltersOpen ? '收起日期' : '自选日期'}}</button>
+    </view>
+    <view class="b-periods">
+      <button wx:for="{{periods}}" wx:key="id" data-id="{{item.id}}" class="b-pill {{period === item.id ? 'b-on' : ''}}" bindtap="changePeriod" disabled="{{catalogBusy}}">{{item.name}}</button>
+    </view>
+    <view wx:if="{{dateFiltersOpen}}" class="b-date-row">
+      <view class="b-date"><view class="b-caption">开始日期</view><picker mode="date" start="{{minDate}}" end="{{maxDate}}" value="{{start}}" data-field="start" disabled="{{catalogBusy}}" bindchange="changeDate"><view class="b-picker">{{start}}</view></picker></view>
+      <view class="b-date"><view class="b-caption">结束日期</view><picker mode="date" start="{{minDate}}" end="{{maxDate}}" value="{{end}}" data-field="end" disabled="{{catalogBusy}}" bindchange="changeDate"><view class="b-picker">{{end}}</view></picker></view>
+      <button class="b-apply" bindtap="applyDates" disabled="{{catalogBusy}}">应用</button>
+    </view>
+    <view wx:if="{{dateNotice}}" class="b-notice">{{dateNotice}}</view>
+  </view>
+
+  <view wx:if="{{busy}}" class="panel b-state">正在读取指数资金与交易日记录…</view>
+  <view wx:if="{{error}}" class="panel b-state">
+    <text>{{error}}</text><button class="b-quiet b-retry" size="mini" bindtap="refresh">重新读取</button>
+  </view>
+  <view wx:if="{{ready}}" class="b-results">
+    <view class="panel b-overview">
+      <view class="b-between">
+        <text class="b-caption">{{indexName}} · 期间估算净申赎</text>
+        <picker range="{{unitNames}}" value="{{unitIndex}}" bindchange="changeUnit"><view class="b-unit">{{unitNames[unitIndex]}} ▾</view></picker>
+      </view>
+      <view class="amount b-amount {{summary.tone}}">{{summary.amount}}</view>
+      <view class="b-range">{{summary.start}} 至 {{summary.end}}</view>
+      <view class="b-facts">
+        <view><text class="b-fact-label">最近有效资金日</text><text class="b-fact-value">{{summary.recent}}</text></view>
+        <view><text class="b-fact-label">已核验 ETF</text><text class="b-fact-value">{{summary.memberCount}} 只</text></view>
+      </view>
+      <view class="b-between"><text class="b-line">{{summary.coverage}}</text><button class="b-link" bindtap="toggleCoverage">{{coverageOpen ? '收起口径' : '统计口径'}}</button></view>
+      <view wx:if="{{coverageOpen}}" class="b-foot">
+        <view>完整期间估算合计 {{summary.complete}}</view>
+        <view>{{summary.ending}}</view>
+        <view>按份额变化 × 前日净值估算，仅累计已披露金额。</view>
+      </view>
+    </view>
+    <view class="b-tabs">
+      <button wx:for="{{sections}}" wx:key="id" data-id="{{item.id}}" bindtap="changeSection" class="b-tab {{section === item.id ? 'b-tab-on' : ''}}">{{item.name}}</button>
+    </view>
+    <view wx:if="{{section === 'chart'}}" class="panel b-detail">
+      <view class="section-title">{{indexName}} · 资金与走势</view>
+      <view class="b-benchmark">
+        <view class="b-caption">{{quote.name}}</view>
+        <view class="b-between"><text class="b-quote">{{quote.quote}}</text><text wx:if="{{quote.change}}" class="{{quote.tone}}">区间 {{quote.change}}</text></view>
+        <view wx:if="{{quote.span}}" class="b-line">{{quote.span}}</view>
+      </view>
+      <flow-chart model="{{chart}}" />
+      <view class="b-foot">红色为估算净流入，绿色为估算净流出，黑线为基准收盘点位。</view>
+    </view>
+    <view wx:if="{{section === 'members'}}" class="panel b-detail">
+      <view class="section-title">所属 ETF</view>
+      <view class="b-line">按所选期间估算净申赎绝对值排序。点基金可查同期历史。</view>
+      <input class="b-input" placeholder="搜索基金名称或代码" value="{{query}}" maxlength="50" bindinput="searchMembers" />
+      <button class="b-member" wx:for="{{memberRows}}" wx:key="code" data-code="{{item.code}}" bindtap="openFund">
+        <view class="b-member-left"><view class="b-fund-name">{{item.name}}</view><text class="b-line">{{item.code}}</text></view>
+        <view class="b-member-right"><view class="b-value {{item.tone}}">{{item.amount}}</view><text class="b-line">{{item.coverage}}</text></view>
+      </button>
+      <view wx:if="{{!memberTotal}}" class="b-state">没有匹配的已核验基金。</view>
+      <view wx:if="{{memberTotal}}" class="b-pages">
+        <button class="b-quiet" data-step="-1" disabled="{{memberPage === 1}}" bindtap="memberPage">上一页</button>
+        <text>第 {{memberPage}} / {{memberPages}} 页 · {{memberTotal}} 只</text>
+        <button class="b-quiet" data-step="1" disabled="{{memberPage === memberPages}}" bindtap="memberPage">下一页</button>
+      </view>
+    </view>
+    <view wx:if="{{section === 'off'}}" class="panel b-detail">
+      <view class="section-title">场外指数与联接基金</view>
+      <view class="b-foot">按报告期末筛选，单位为份。联接基金可能持有场内 ETF，场外份额与场内资金分别展示。</view>
+      <view wx:if="{{offBusy}}" class="b-state">正在读取场外报告…</view>
+      <view wx:if="{{offError}}" class="b-state"><text>{{offError}}</text><button class="b-quiet b-retry" bindtap="retryReports">重试场外报告</button></view>
+      <view wx:if="{{!offBusy}}">
+        <view wx:if="{{!offError}}">
+          <view wx:if="{{!offTotal}}" class="b-state">期间暂无已核验报告，申购赎回份额未知。</view>
+          <view wx:for="{{offRows}}" wx:key="key" class="b-record">
+            <view class="b-fund-name">{{item.name}} {{item.code}}</view>
+            <view class="b-line">{{item.shareClass}} · {{item.dates}}</view>
+            <view class="b-record-line">申购 {{item.bought}} · 赎回 {{item.sold}}</view>
+            <view class="b-record-line">净申购 <text class="{{item.tone}}">{{item.net}}</text> · 期末 {{item.ending}}</view>
+          </view>
+          <view wx:if="{{offTotal}}" class="b-pages">
+            <button class="b-quiet" data-step="-1" disabled="{{offPage === 1}}" bindtap="reportPage">上一页</button>
+            <text>第 {{offPage}} / {{offPages}} 页 · {{offTotal}} 条</text>
+            <button class="b-quiet" data-step="1" disabled="{{offPage === offPages}}" bindtap="reportPage">下一页</button>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{section === 'daily'}}" class="panel b-detail">
+      <view class="section-title">指数每日资金明细</view>
+      <view class="b-line">按交易日倒序展示估算净申赎及成员覆盖。</view>
+      <view wx:if="{{!dailyTotal}}" class="b-state">所选日期内没有已核验的开市日。</view>
+      <view wx:for="{{dailyRows}}" wx:key="date" class="b-record">
+        <view class="b-between"><text class="b-fund-name">{{item.date}}</text><text class="b-value {{item.tone}}">{{item.amount}}</text></view>
+        <view class="b-line">{{item.coverage}} · 完整合计 {{item.complete}}</view>
+        <view class="b-line">指数收盘 {{item.close}}</view><view wx:if="{{item.unknown}}" class="b-line">{{item.unknown}}</view>
+      </view>
+      <view wx:if="{{dailyTotal}}" class="b-pages">
+        <button class="b-quiet" data-step="-1" disabled="{{dailyPage === 1}}" bindtap="dailyPage">上一页</button>
+        <text>第 {{dailyPage}} / {{dailyPages}} 页 · {{dailyTotal}} 日</text>
+        <button class="b-quiet" data-step="1" disabled="{{dailyPage === dailyPages}}" bindtap="dailyPage">下一页</button>
+      </view>
+    </view>
+  </view>
+</view>

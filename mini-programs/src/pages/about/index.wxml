@@ -1,0 +1,20 @@
+<view class="page about-page">
+  <view class="title">数据与版本</view>
+  <view class="panel"><view class="section-title">版本与更新</view>
+    <view class="version-row"><text>当前应用版本</text><text class="version-value">{{appVersion}}</text></view>
+    <view class="version-row"><text>包标识</text><text class="version-value">{{buildId}}</text></view>
+    <view class="version-row"><text>行情数据目标日</text><text class="version-value">{{dataDate}}</text></view>
+    <button wx:if="{{dateRetry}}" bindtap="refreshSource">重新读取数据日期</button>
+    <view class="copy">{{update.message}}</view>
+    <button wx:if="{{update.canRestart}}" bindtap="applyReady">重启并使用新版</button>
+  </view>
+  <view class="panel"><view class="section-title">{{info.label}}</view>
+    <block wx:if="{{info.mode === 'snapshot'}}"><view class="copy">宽基与基金资料覆盖 {{info.target_start}} 至 {{info.target_end}}，含 {{info.indices}} 个指数、{{info.broadFunds}} 只已核验宽基 ETF。</view><view class="copy">可查询宁德时代和贵州茅台的资金估算及上市以来收盘价。离线包按制作日固定，更新包后才会改变。</view></block>
+    <view wx:elif="{{info.mode === 'local'}}" class="copy">当前从这台电脑的 ETF 资金观察读取已验证数据。每个页面按实际观测日期展示结果。</view>
+    <block wx:else><view class="copy">使用数据服务管理端显示的单次连接码访问私人数据。{{info.paired?'当前已连接。':''}}</view><input type="number" maxlength="8" password="true" value="{{code}}" bindinput="inputCode" placeholder="8 位连接码"/><button bindtap="connect" disabled="{{busy}}">连接数据服务</button><text>{{message}}</text></block>
+  </view>
+  <view class="panel"><view class="section-title">怎样读资金和股价</view>
+    <view class="copy">场内 ETF 净申赎根据份额变化和净值估算。红色表示净流入，绿色表示净流出。缺失值留空。</view>
+    <view class="copy">场外按报告期展示申购、赎回和净申购份额，各份额类别可能重叠。场内资金与场外份额分别统计。</view>
+    <view class="copy">个股资金为当前已披露持仓权重回溯估算。股价按实际交易日展示不复权收盘价，采用独立刻度。自选记录保存在当前设备。</view>
+  </view></view>

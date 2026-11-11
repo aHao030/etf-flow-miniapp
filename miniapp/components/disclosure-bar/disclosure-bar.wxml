@@ -1,0 +1,5 @@
+<view class="bar" wx:if="{{short}}">
+  <text class="tag">估算值</text>
+  <text class="txt">{{short}}</text>
+  <text class="info" catchtap="onInfo">ⓘ</text>
+</view>

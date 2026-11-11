@@ -1,0 +1,39 @@
+.page {
+  padding-bottom: 40rpx;
+}
+.tip {
+  font-size: 22rpx;
+  color: #8a919f;
+  padding: 16rpx 24rpx 4rpx;
+}
+.section {
+  margin: 12rpx 24rpx 20rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 24rpx 4rpx;
+}
+.wl-row {
+  display: flex;
+  align-items: center;
+}
+.wl-row stock-row {
+  flex: 1;
+  min-width: 0;
+}
+.sw {
+  transform: scale(0.8);
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+.remind-note {
+  font-size: 22rpx;
+  color: #8a919f;
+  padding: 8rpx 32rpx;
+  line-height: 1.6;
+}

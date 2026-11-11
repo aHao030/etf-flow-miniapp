@@ -1,0 +1,118 @@
+<wxs src="/utils/fmt.wxs" module="fmt" />
+<view class="page">
+  <block wx:if="{{!loading && !error}}">
+    <!-- 数据状态提示（契约 §2.4 data_status） -->
+    <view class="notice-bar notice-bar-info" wx:if="{{dataStatus !== 'ok'}}">{{statusText}}{{note ? '：' + note : ''}}</view>
+
+    <!-- 头部 -->
+    <view class="card head-card">
+      <view class="head-row">
+        <view class="head-main">
+          <view class="name-line">
+            <text class="name">{{name}}</text>
+            <text class="code">{{code}}</text>
+          </view>
+          <view class="sub-line">
+            <text class="industry">{{industryName}}</text>
+            <text class="muted">流通市值 {{fmt.mcap(floatMcap)}}</text>
+          </view>
+        </view>
+        <view class="star {{isWatched ? 'on' : ''}}" bindtap="onToggleWatch">{{isWatched ? '★' : '☆'}}</view>
+      </view>
+      <view class="muted" style="margin-top: 8rpx;">数据截至 {{tradeDate}} · 盘后 T+1</view>
+    </view>
+
+    <!-- 指标卡：周期切换 -->
+    <view class="card">
+      <view class="tabs">
+        <view
+          wx:for="{{periods}}"
+          wx:key="key"
+          class="tab {{period === item.key ? 'on' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="onPeriodTap"
+        >{{item.label}}</view>
+      </view>
+      <view class="metric">
+        <view class="metric-label">估算净流入（{{period === '1d' ? '单日' : period === '5d' ? '5日' : '20日'}}）</view>
+        <view class="metric-value {{fmt.cls(movement.net_flow)}}">{{fmt.money(movement.net_flow)}}</view>
+      </view>
+      <view class="metric-row">
+        <view class="metric-col">
+          <view class="metric-label">净流入 ETF 贡献</view>
+          <view class="metric-sub {{fmt.cls(movement.inflow)}}">{{fmt.money(movement.inflow)}}</view>
+        </view>
+        <view class="metric-col">
+          <view class="metric-label">有效天数</view>
+          <view class="metric-sub">{{validDays}}</view>
+        </view>
+        <view class="metric-col">
+          <view class="metric-label">净流出 ETF 贡献</view>
+          <view class="metric-sub {{fmt.cls(movement.outflow)}}">{{fmt.money(movement.outflow)}}</view>
+        </view>
+      </view>
+      <view class="muted" style="margin-top: 16rpx;">按各 ETF 在所选周期的净贡献正负分组，两项相加为净额；有效天数不足时净额可能不展示。</view>
+    </view>
+
+    <view class="card" wx:if="{{movement}}">
+      <view class="muted">相关 ETF {{movement.etf_count}} 只 · 净流入 {{movement.inflow_etf_count}} 只 · 净流出 {{movement.outflow_etf_count}} 只 · 缺失 {{movement.missing_etf_count}} 只</view>
+      <view class="muted">有效 {{movement.valid_days}} / {{movement.window_days}} 日{{movement.complete ? '' : ' · 数据不完整'}}</view>
+    </view>
+    <view class="card" wx:if="{{coverage}}">
+      <view class="section-title">覆盖范围</view>
+      <view class="muted">跟踪 {{coverage.tracked_etfs}} 只 · 已计算 {{coverage.active_etfs}} 只 · 本股有贡献 {{coverage.contributing_etfs}} 只 · 待纳入 {{coverage.pending_etfs}} 只</view>
+      <view class="muted">{{coverage.note}}</view>
+      <view class="muted">{{historyNote}}</view>
+    </view>
+
+    <!-- 60 日序列图 -->
+    <view class="card">
+      <view class="section-title">流量序列（近 60 交易日）</view>
+      <flow-chart
+        series="{{series}}"
+        seriesKey="flow"
+        chartType="bar"
+        seriesName="估算净流入"
+        unitText="万元"
+        unitDiv="{{10000}}"
+        footnote="柱：单日估算净流入（红流入/绿流出）· 橙线：5日均值（前端计算）"
+      />
+    </view>
+
+    <!-- ETF 来源拆解 -->
+    <view class="card" style="padding: 0; overflow: hidden;">
+      <view class="card-pad">
+        <view class="section-title">ETF 来源拆解（{{topEtfs.length}} 只）</view>
+        <view class="muted">所选周期内各 ETF 对个股的估算贡献</view>
+      </view>
+      <stock-row wx:for="{{topEtfs}}" wx:key="code" item="{{item}}" bind:tap="onEtfTap" />
+      <view class="muted card-pad" wx:if="{{topEtfs.length === 0}}">当前范围内暂无 ETF 贡献数据；不代表资金流为零</view>
+    </view>
+
+    <!-- 质量标记 -->
+    <view class="card">
+      <view class="section-title">数据质量标记</view>
+      <view class="quality-row">
+        <text class="badge {{weightSourceBadge}}">{{weightSourceLabel}}</text>
+        <text class="muted" wx:if="{{coverageText}}">权重覆盖率 {{coverageText}}</text>
+      </view>
+      <view class="chips" wx:if="{{flagLabels.length}}">
+        <text class="chip chip-warn" wx:for="{{flagLabels}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="muted" style="margin-top: 12rpx;">{{qualityNote}}</view>
+    </view>
+
+    <disclosure-bar />
+  </block>
+
+  <block wx:if="{{loading}}">
+    <view class="skeleton-row" wx:for="{{[1,2,3,4]}}" wx:key="*this">
+      <view class="skeleton-line"></view>
+      <view class="skeleton-line" style="width: 60%;"></view>
+    </view>
+  </block>
+
+  <block wx:if="{{error}}">
+    <empty-state text="{{error}}" actionText="点击重试" bind:action="onRetry" />
+  </block>
+</view>

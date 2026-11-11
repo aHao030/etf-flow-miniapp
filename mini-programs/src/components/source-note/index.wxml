@@ -1,0 +1,1 @@
+<view class="source"><text class="origin">{{info.label}}</text><text wx:if="{{info.target_end || target}}">目标日 {{info.target_end || target}}</text></view>

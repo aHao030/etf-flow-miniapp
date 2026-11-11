@@ -1,0 +1,46 @@
+<view class="page">
+  <view class="card">
+    <view class="section-title">数据口径说明</view>
+    <view class="para">本产品展示的「估算净流入」为估算值：</view>
+    <view class="formula">Flow(i,t) = Σ [ Δ份额(e,t) × 单位净值(e,t−1) × 权重(e,i,t) ]</view>
+    <view class="para">对所有包含个股 i 的 ETF e 求和。</view>
+    <view class="para">
+      · 权重来源：优先 ETF 每日申购赎回清单（PCF），回退基金季报持仓（滞后 1–2 个月）；
+    </view>
+    <view class="para">· 更新频率：每日盘后 T+1（交易日约 21:00 前）；</view>
+    <view class="para">· 误差来源：季报持仓滞后、权重近似、ETF 申赎不等于当日实际买卖；</view>
+    <view class="para">· 界面所有相关数值统一标注「估算」字样。</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">数据口径说明（完整版）</view>
+    <view class="para">{{disclosureLong || '口径文案加载中…'}}</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">免责声明</view>
+    <view class="para">{{disclaimer || '免责声明文案加载中…'}}</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">数据来源</view>
+    <view class="para">· 上交所 / 深交所 ETF 份额披露</view>
+    <view class="para">· 天天基金、东方财富（ETF 份额与净值）</view>
+    <view class="para">· 中证指数官网（指数权重）</view>
+    <view class="para">· 基金定期报告（季报持仓）</view>
+    <view class="para muted">商用前需逐源确认服务条款。</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">隐私说明</view>
+    <view class="para">· 自选数据仅保存在本机，不采集手机号、昵称、头像等个人信息；</view>
+    <view class="para">· 订阅消息需您主动授权，仅用于自选数据提醒，不用于营销。</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">关于</view>
+    <view class="para">版本 {{appVersion}} · 数据截至 {{latestDate || '—'}}</view>
+    <view class="para muted">A股 ETF 资金流入个股监控 · 内部工具（体验版）</view>
+    <view class="clear-btn" bindtap="onClearWatchlist">清除自选缓存</view>
+  </view>
+</view>

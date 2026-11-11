@@ -1,0 +1,109 @@
+/* app.wxss —— 全局样式
+ * A股配色约定：红涨绿跌。估算净流入 >0 红色（流入）、<0 绿色（流出）。
+ * 口径披露、免责声明样式为全站统一组件（disclosure-bar）。
+ */
+page {
+  background: #f5f6f7;
+  font-size: 28rpx;
+  color: #1f2329;
+  line-height: 1.5;
+}
+
+/* 涨跌配色：up=流入=红，down=流出=绿 */
+.up {
+  color: #d43c33;
+}
+.down {
+  color: #0a9b4b;
+}
+.flat {
+  color: #8a919f;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  margin: 16rpx 24rpx;
+  padding: 24rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1f2329;
+}
+
+.muted {
+  color: #8a919f;
+  font-size: 24rpx;
+}
+
+.chip {
+  display: inline-block;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  background: #f2f3f5;
+  color: #646a73;
+  margin-right: 8rpx;
+  margin-bottom: 4rpx;
+}
+.chip-warn {
+  background: #fff7e6;
+  color: #b26a00;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+}
+.badge-index {
+  background: #eef3fe;
+  color: #2b5cd9;
+}
+.badge-quarter {
+  background: #f2f3f5;
+  color: #646a73;
+}
+
+/* 顶部提示条（深市积累中 / 数据状态） */
+.notice-bar {
+  background: #fff7e6;
+  color: #8a5a00;
+  font-size: 24rpx;
+  padding: 12rpx 24rpx;
+}
+.notice-bar-info {
+  background: #eef3fe;
+  color: #2b5cd9;
+}
+
+/* 骨架占位 */
+.skeleton-row {
+  background: #ffffff;
+  border-radius: 16rpx;
+  margin: 12rpx 24rpx;
+  padding: 24rpx;
+}
+.skeleton-line {
+  height: 28rpx;
+  border-radius: 8rpx;
+  background: linear-gradient(90deg, #f2f3f5 25%, #e9eaec 50%, #f2f3f5 75%);
+  background-size: 400% 100%;
+  animation: skeleton-blink 1.2s infinite;
+  margin-bottom: 16rpx;
+}
+@keyframes skeleton-blink {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+button::after {
+  border: none;
+}

@@ -1,0 +1,18 @@
+<wxs src="/utils/fmt.wxs" module="fmt" />
+<view class="row" bindtap="onTap">
+  <view class="main">
+    <view class="name-line">
+      <text class="name">{{item.name}}</text>
+      <text class="code">{{item.code}}</text>
+    </view>
+    <view class="sub" wx:if="{{item.sub}}">{{item.sub}}</view>
+  </view>
+  <view class="right">
+    <view class="flow {{fmt.cls(item.flow)}}">{{fmt.money(item.flow)}}</view>
+    <view class="intensity {{fmt.cls(item.intensity_bp)}}" wx:if="{{item.intensity_bp !== undefined && item.intensity_bp !== null}}">
+      强度 {{fmt.intensity(item.intensity_bp)}}
+    </view>
+    <view class="extra" wx:if="{{item.extra}}">{{item.extra}}</view>
+  </view>
+  <view class="arrow" wx:if="{{showArrow}}">›</view>
+</view>
