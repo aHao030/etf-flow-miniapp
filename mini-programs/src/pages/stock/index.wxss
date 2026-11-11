@@ -5,6 +5,7 @@
 .stock-page .stock-outline, .stock-pager button { border:1rpx solid var(--color-border-emphasized); }
 .stock-summary-head { margin-top:var(--spacing-2); }
 .stock-net { margin-top:var(--spacing-1); }
+.stock-end { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:var(--spacing-1); border-top:1rpx solid var(--color-border); padding-top:var(--spacing-2); font-weight:600; }
 .stock-result, .stock-source { width:100%; border-radius:0; text-align:left; }
 .stock-result { display:flex; align-items:center; justify-content:space-between; border-bottom:1rpx solid var(--color-border); }
 .stock-page .stock-result, .stock-page .stock-source { padding:var(--spacing-2) 0; font-size:var(--font-size-base); }

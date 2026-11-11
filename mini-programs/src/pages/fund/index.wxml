@@ -1,12 +1,13 @@
 <view class="page fund-page">
   <view class="fund-head">
     <view class="fund-name"><text class="title">{{name}}</text><text class="fund-code">{{code}}</text></view>
-    <view class="row"><button wx:if="{{ready}}" class="button" bindtap="retry">刷新</button><button class="button fund-back" bindtap="goBack">返回</button></view>
+    <button class="fund-back" bindtap="goBack">‹ {{backLabel}}</button>
   </view>
   <source-note target="{{maxDate}}" />
   <view class="fund-filter" wx:if="{{minDate}}">
     
-    <view class="fund-dates">
+    <view class="row"><text class="fund-range">{{start || draftStart}} 至 {{end || draftEnd}}</text><button class="fund-back" bindtap="toggleDates">{{dateFiltersOpen ? '收起日期' : '更改日期'}}</button></view>
+    <view wx:if="{{dateFiltersOpen}}" class="fund-dates">
       <picker mode="date" start="{{minDate}}" end="{{maxDate}}" value="{{draftStart}}" data-field="draftStart" bindchange="changeDate">
         <view class="fund-date"><text class="muted">开始日期</text><text>{{draftStart}}</text></view>
       </picker>
@@ -26,8 +27,7 @@
   </view>
 
   <view wx:if="{{ready}}" class="panel">
-    <text class="section-title">基金历史趋势</text>
-    <text class="fund-note muted">{{start}} 至 {{end}}</text>
+    <view class="row"><text class="section-title">基金历史趋势</text><button class="fund-back" bindtap="retry">刷新</button></view>
     <view wx:if="{{summaryValue}}" class="fund-summary">
       <text class="metric-label">{{summaryLabel}}</text><text class="amount {{summaryTone}}">{{summaryValue}}</text>
     </view>
@@ -37,7 +37,7 @@
       <button class="chip {{metric === 'nav' ? 'active' : ''}}" data-metric="nav" bindtap="selectMetric">单位净值</button>
     </view>
     <text wx:if="{{coverage}}" class="fund-note muted">{{coverage}}</text>
-    <flow-chart wx:if="{{chart}}" model="{{chart}}" />
+    <flow-chart wx:if="{{chart}}" model="{{chart}}" day="{{chartDay}}" bind:inspect="inspectDay" />
     <text wx:if="{{chartNotice}}" class="fund-note">{{chartNotice}}</text>
     <button wx:if="{{chartRetry}}" class="button" bindtap="retry">{{chartRetry}}</button>
     <text wx:if="{{metric === 'flow'}}" class="fund-note muted">按份额变化 × 前一交易日净值估算，仅累计有值日。缺失日保留空白。</text>

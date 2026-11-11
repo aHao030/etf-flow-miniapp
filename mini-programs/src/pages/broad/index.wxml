@@ -28,16 +28,17 @@
   <view wx:if="{{ready}}" class="b-results">
     <view class="panel b-overview">
       <view class="b-between">
-        <text class="b-caption">{{indexName}} · 期间估算净申赎</text>
+        <text class="b-caption">{{indexName}} · 期间已披露资金小计</text>
         <picker range="{{unitNames}}" value="{{unitIndex}}" bindchange="changeUnit"><view class="b-unit">{{unitNames[unitIndex]}} ▾</view></picker>
       </view>
-      <view class="amount b-amount {{summary.tone}}">{{summary.amount}}</view>
+      <view class="b-figure"><text class="amount b-amount {{summary.tone}}">{{summary.amount}}</text><text wx:if="{{summary.direction}}" class="b-direction {{summary.tone}}">{{summary.direction}}</text></view>
       <view class="b-range">{{summary.start}} 至 {{summary.end}}</view>
+      <view wx:if="{{summary.partial}}" class="b-line">部分成员或交易日缺少估算</view>
       <view class="b-facts">
+        <view><text class="b-fact-label">期末交易日 {{summary.lastDate}}</text><text class="b-fact-value {{summary.lastTone}}">{{summary.lastDate ? summary.lastAmount : '期间无交易日'}}</text></view>
         <view><text class="b-fact-label">最近有效资金日</text><text class="b-fact-value">{{summary.recent}}</text></view>
-        <view><text class="b-fact-label">已核验 ETF</text><text class="b-fact-value">{{summary.memberCount}} 只</text></view>
       </view>
-      <view class="b-between"><text class="b-line">{{summary.coverage}}</text><button class="b-link" bindtap="toggleCoverage">{{coverageOpen ? '收起口径' : '统计口径'}}</button></view>
+      <view class="b-between"><text class="b-line">{{summary.memberCount}} 只 ETF · {{summary.coverage}}</text><button class="b-link" bindtap="toggleCoverage">{{coverageOpen ? '收起口径' : '统计口径'}}</button></view>
       <view wx:if="{{coverageOpen}}" class="b-foot">
         <view>完整期间估算合计 {{summary.complete}}</view>
         <view>{{summary.ending}}</view>
@@ -49,12 +50,12 @@
     </view>
     <view wx:if="{{section === 'chart'}}" class="panel b-detail">
       <view class="section-title">{{indexName}} · 资金与走势</view>
+      <flow-chart model="{{chart}}" day="{{chartDay}}" bind:inspect="inspectDay" />
       <view class="b-benchmark">
         <view class="b-caption">{{quote.name}}</view>
         <view class="b-between"><text class="b-quote">{{quote.quote}}</text><text wx:if="{{quote.change}}" class="{{quote.tone}}">区间 {{quote.change}}</text></view>
         <view wx:if="{{quote.span}}" class="b-line">{{quote.span}}</view>
       </view>
-      <flow-chart model="{{chart}}" />
       <view class="b-foot">红色为估算净流入，绿色为估算净流出，黑线为基准收盘点位。</view>
     </view>
     <view wx:if="{{section === 'members'}}" class="panel b-detail">

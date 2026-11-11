@@ -36,16 +36,17 @@
     <view wx:if="{{state === 'error'}}" class="panel stack"><text>{{error}}</text><button class="button" bindtap="retryStock">重新读取</button></view>
     <block wx:if="{{state === 'ready'}}">
       <view class="panel stack">
-        <view class="metric-label">已披露 ETF 持仓贡献小计</view>
+        <view class="metric-label">所选期间 · ETF 持仓估算贡献小计</view>
         <view class="amount stock-net {{netClass}}">{{net}}</view><view>{{windowText}}</view>
         <view class="chips"><button wx:for="{{periods}}" wx:key="key" class="chip {{period === item.key ? 'active' : ''}}" data-value="{{item.key}}" bindtap="choosePeriod">{{item.label}}</button></view>
+        <view class="stock-end"><text class="muted">期末交易日 {{endDate}}</text><text class="{{endTone}}">{{endAmount}}</text></view>
         <view class="muted">{{coverageText}}</view>
-        <view wx:if="{{missingNote}}" class="stock-message">{{missingNote}}</view>
+        <view wx:if="{{recentDate}}" class="muted">最近有效资金日 {{recentDate}}</view>
       </view>
       <view class="panel stack">
         <view class="section-title">资金与股价</view>
         <view class="stock-units"><text class="muted">资金单位</text><view class="chips"><button wx:for="{{units}}" wx:key="key" data-value="{{item.key}}" class="chip {{unit === item.key ? 'active' : ''}}" bindtap="chooseUnit">{{item.label}}</button></view></view>
-        <flow-chart wx:if="{{chart}}" model="{{chart}}" />
+        <flow-chart wx:if="{{chart}}" model="{{chart}}" day="{{chartDay}}" bind:inspect="inspectDay"/>
         <view class="muted">{{priceNote}}</view><button wx:if="{{priceState === 'error'}}" class="stock-text-button" bindtap="loadOverlay">重试收盘价</button>
         <view class="muted">ETF 贡献按披露持仓权重回溯。缺少估算或价格的日期留空。</view>
         <button class="stock-outline" bindtap="toggleDaily">{{dailyOpen ? '收起逐日数据' : '查看逐日资金与股价'}}</button>
@@ -70,7 +71,7 @@
         <button wx:if="{{!lifeOpen}}" class="stock-outline" bindtap="openLife">查看上市以来收盘价</button>
         <block wx:if="{{lifeOpen}}"><view class="stock-dates"><picker mode="date" value="{{lifeFrom}}" start="{{lifeMin}}" end="{{asOf}}" data-field="lifeFrom" bindchange="setLifeDate"><view class="stock-date"><text class="muted">开始日期</text><text>{{lifeFrom}}</text></view></picker><picker mode="date" value="{{lifeTo}}" start="{{lifeMin}}" end="{{asOf}}" data-field="lifeTo" bindchange="setLifeDate"><view class="stock-date"><text class="muted">结束日期</text><text>{{lifeTo}}</text></view></picker></view>
           <button class="stock-outline" disabled="{{lifeState === 'loading'}}" bindtap="loadLife">应用股价范围</button>
-          <flow-chart wx:if="{{lifeChart}}" model="{{lifeChart}}"/><view class="muted">{{lifeNote}}</view>
+          <flow-chart wx:if="{{lifeChart}}" model="{{lifeChart}}" day="{{lifeDay}}" bind:inspect="inspectLifeDay"/><view class="muted">{{lifeNote}}</view>
           <block wx:if="{{lifeState === 'ready'}}"><view class="muted">不复权收盘价可能因除权除息跳变。</view><button class="stock-outline" bindtap="toggleLifeDaily">{{lifeDailyOpen ? '收起逐日收盘价' : '查看逐日收盘价'}}</button></block>
           <block wx:if="{{lifeDailyOpen}}"><view class="stock-between stock-columns"><text>交易日</text><text>收盘价（元/股）</text></view><view class="stock-between" wx:for="{{lifeDaily.items}}" wx:key="date"><text>{{item.date}}</text><text>{{item.close}}</text></view>
             <view class="stock-pager"><button disabled="{{lifeDaily.current === 1}}" data-value="-1" bindtap="changeLifeDaily">上一页</button><text>{{lifeDaily.current}} / {{lifeDaily.pages}}</text><button disabled="{{lifeDaily.current === lifeDaily.pages}}" data-value="1" bindtap="changeLifeDaily">下一页</button></view>

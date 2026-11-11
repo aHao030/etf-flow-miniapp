@@ -118,7 +118,7 @@ function applyEntryRange(writeInputs = true) {
   }
   openingFund = false;
   if (!available) {
-    const message = valid ? '宽基所选区间 '+requested.start+' 至 '+requested.end+' 与基金历史可查询范围 '+state.targetStart+' 至 '+state.targetEnd+' 没有交集，请调整日期。' : '传入的宽基日期范围无效，请选择有效的开始和结束日期。';
+    const message = valid ? '所选区间 '+requested.start+' 至 '+requested.end+' 与基金历史可查询范围 '+state.targetStart+' 至 '+state.targetEnd+' 没有交集，请调整日期。' : '传入的日期范围无效，请选择有效的开始和结束日期。';
     clearChart(message); setMessage($('history-rows-state'), message);
     $('history-page').textContent = '未查询'; $('history-prev').disabled = true; $('history-next').disabled = true;
   }
@@ -199,7 +199,7 @@ async function loadCatalog() {
 }
 function openFund(item) {
   if (!/^\d{6}$/.test(item.fund_code || '')) return;
-  entryRange = item.return_view !== 'stock' && ('range_start' in item || 'range_end' in item)
+  entryRange = ('range_start' in item || 'range_end' in item)
     ? {start:item.range_start,end:item.range_end} : null;
   openingFund = true; followLatestEnd = !entryRange;
   state.code = item.fund_code; state.historyPage = 1; state.historyTotal = 0;
@@ -210,9 +210,9 @@ function openFund(item) {
   $('history-fund-heading').textContent = (item.fund_name || 'ETF') + '  ' + item.fund_code;
   $('history-fund-subtitle').textContent = (marketNames[item.market] || item.market || '交易所未知') + ' · 历史数据';
   $('history-detail-content').hidden = false; $('history-detail-status').hidden = true;
+  revealSection('history-fund-heading');
   if (metaLoading || !state.targetEnd) { setMessage($('history-rows-state'), '等待历史范围信息…'); return; }
   if (applyEntryRange()) loadHistory(true);
-  $('history-fund-heading').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function coverageBlock(title, info) {
   const block = el('div', null, 'coverage-item'); block.append(el('strong', title), el('span', dateRange(info))); return block;
@@ -239,7 +239,7 @@ async function loadHistory(refreshChart = false) {
     $('history-fund-heading').textContent = (fund.fund_name || 'ETF') + '  ' + state.code;
     $('history-fund-subtitle').textContent = (marketNames[fund.market] || fund.market || '交易所未知') + ' · 请求范围 ' + data.start + ' 至 ' + data.end;
     if (entryRange && (entryRange.start !== data.start || entryRange.end !== data.end)) {
-      $('history-fund-subtitle').textContent += '（宽基所选 '+entryRange.start+' 至 '+entryRange.end+'，已按可查询范围调整）';
+      $('history-fund-subtitle').textContent += '（原选区间 '+entryRange.start+' 至 '+entryRange.end+'，已按可查询范围调整）';
     }
     $('history-coverage').append(coverageBlock('份额记录', coverage.shares), coverageBlock('净值记录', coverage.nav));
     if (coverage.flow) $('history-coverage').append(coverageBlock('ETF 净申赎估算', coverage.flow));

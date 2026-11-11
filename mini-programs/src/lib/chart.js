@@ -14,7 +14,7 @@ function segment(x1,y1,x2,y2){
   const dx=x2-x1,dy=y2-y1;
   return 'left:'+x1+'rpx;top:'+y1+'rpx;width:'+Math.hypot(dx,dy)+'rpx;transform:rotate('+Math.atan2(dy,dx)+'rad)';
 }
-function chartModel(rows, opts = {}) {
+function chartModel(rows, opts = {}, registerDayReader) {
   const input=Array.isArray(rows)?rows:[], bar=opts.kind!=='line', size=Math.max(1,Math.ceil(input.length/MAX_GROUPS));
   const groups=[];
   for(let i=0;i<input.length;i+=size){
@@ -30,6 +30,18 @@ function chartModel(rows, opts = {}) {
   const largest=ys.reduce((n,v)=>Math.max(n,Math.abs(v)),0);
   const unit=opts.moneyUnit==='wan'||opts.moneyUnit==='yi'?opts.moneyUnit:(largest>=1e8?'yi':'wan');
   const valueText=v=>!valid(v)?'暂无记录':opts.currency?money(v,unit):number(v,opts.unit==='元'?4:2)+' '+(opts.unit||'');
+  const overlayText=v=>valid(v)?number(v,2)+' '+(opts.overlayUnit||'点'):'暂无记录';
+  const valueTone=v=>bar&&opts.currency?(v>0?'in':v<0?'out':'neutral'):'neutral';
+  // Keep raw years of daily observations on the page; send only the requested day across the native bridge.
+  if(registerDayReader)registerDayReader(date=>{
+    if(!input.length||typeof date!=='string'||date<input[0].date||date>input[input.length-1].date)return null;
+    let lo=0,hi=input.length;
+    while(lo<hi){const mid=Math.floor((lo+hi)/2);if(input[mid].date<date)lo=mid+1;else hi=mid;}
+    const row=input[lo]?.date===date?input[lo]:null;
+    const group=row?Math.floor(lo/size):-1;
+    return {date,listed:!!row,group,x:row?x(group):null,prev:input[lo-1]?.date||'',
+      next:input[row?lo+1:lo]?.date||'',amount:valueText(row?.value),tone:valueTone(row?.value),overlayText:overlayText(row?.overlay)};
+  });
   const x=i=>MARGIN+(i+.5)*(WIDTH-2*MARGIN)/Math.max(groups.length,1);
   const segments=[], points=[];
   groups.forEach((g,i)=>{
@@ -39,13 +51,14 @@ function chartModel(rows, opts = {}) {
     if(!bar&&valid(g.value)&&prev&&valid(prev.value)&&prev.ends&&g.starts&&prev.count===prev.days&&g.count===g.days)addLine(yFor(prev.value,mainRange),cy,'primary');
     if(valid(g.overlay)&&prev&&valid(prev.overlay)&&prev.overEnds&&g.overStarts&&prev.overCount===prev.days&&g.overCount===g.days)addLine(yFor(prev.overlay,overRange),oy,'overlay');
     const bw=Math.min(18,Math.max(2,col*.61));const rect='left:'+(cx-bw/2)+'rpx;top:'+Math.min(cy,zero)+'rpx;width:'+bw+'rpx;height:'+Math.max(2,Math.abs(zero-cy))+'rpx';
-    points.push({key:g.key,i,x:cx,bar:bar&&valid(g.value),dot:!bar&&valid(g.value),overDot:valid(g.overlay),tone:bar&&opts.currency?(g.value>0?'in':g.value<0?'out':'neutral'):'neutral',
+    points.push({key:g.key,i,x:cx,bar:bar&&valid(g.value),dot:!bar&&valid(g.value),overDot:valid(g.overlay),tone:valueTone(g.value),
+      end:g.end,prev:input[i*size+g.days-2]?.date||'',next:input[i*size+g.days]?.date||'',
       rect,dotStyle:'left:'+cx+'rpx;top:'+cy+'rpx',overStyle:'left:'+cx+'rpx;top:'+oy+'rpx',
-      date:g.days===1?g.start:g.start+' 至 '+g.end,amount:valueText(g.value),overlayText:valid(g.overlay)?number(g.overlay,2)+' '+(opts.overlayUnit||'点'):'暂无记录',
+      date:g.days===1?g.start:g.start+' 至 '+g.end,amount:valueText(g.value),overlayText:overlayText(g.overlay),
       coverage:size>1?(bar?'组内有值 '+g.count+' / '+g.days+' 日':('组内末次有效日期 '+(g.valueDate||'—'))):'',overlayDate:g.overlayDate});
   });
   const label=opts.label||'数值';
-  return {points,segments,hasData:ys.length+os.length>0,label:size===1?label:(bar?'组内合计 · ':'组内末次 · ')+label.replace(/^(当日|单日|每日)\s*/,''),overlayLabel:opts.overlayLabel||'',
+  return {points,segments,hasData:ys.length+os.length>0,dailyLabel:label,label:size===1?label:(bar?'组内合计 · ':'组内末次 · ')+label.replace(/^(当日|单日|每日)\s*/,''),overlayLabel:opts.overlayLabel||'',
     mainScale:ys.length?valueText(Math.min.apply(null,ys))+' 至 '+valueText(Math.max.apply(null,ys)):'',
     overlayScale:os.length?number(Math.min.apply(null,os),2)+' 至 '+number(Math.max.apply(null,os),2)+' '+(opts.overlayUnit||'点'):'',
     first:input.length?input[0].date:'',last:input.length?input[input.length-1].date:'',

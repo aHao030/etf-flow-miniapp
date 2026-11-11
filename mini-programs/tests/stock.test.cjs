@@ -56,14 +56,17 @@ test('search keeps latest query, supports pagination and does not request an emp
 test('funds load before prices, unit and pagination reuse data, full list navigates and watch returns to search',async()=>{
   const pricesPending=deferred();const {p,calls,charts,nav}=page((url,params)=>url.startsWith('market/stock/')?Promise.resolve(stock('600519',params.period)):pricesPending.promise);
   await p.chooseStock(codeEvent('600519'));assert.equal(calls[0].params.period,'20d');assert.equal(p.data.state,'ready');assert.equal(p.data.priceState,'loading');
-  assert.equal(p.data.net,'20 auto');assert.match(p.data.missingNote,/2026-11-10.*2026-11-09/,'real zero counts as a valid latest flow');
+  assert.equal(p.data.net,'20 auto');assert.equal(p.data.endAmount,'暂无估算');assert.equal(p.data.recentDate,'2026-11-09','real zero counts as a valid latest flow');
   assert.equal(p.data.top.length,10);assert.equal(p.data.top[0].code,'510021');assert.equal(p.data.fundCount,23);
   pricesPending.resolve(prices('600519',dates[0],dates[2]));await tick();assert.equal(p.data.priceState,'ready');
   assert.equal(charts.at(-1).rows[0].overlay,100);assert.equal(charts.at(-1).rows[1].overlay,null);assert.equal(charts.at(-1).rows[2].value,null);
   assert.equal(p.data.daily.items[0].date,dates[2]);assert.equal(p.data.daily.items[0].amount,'—');assert.equal(p.data.daily.items[0].close,'101.00');
   p.chooseUnit(event('yi'));assert.equal(p.data.net,'20 yi');assert.equal(p.data.daily.items[0].close,'101.00');
   p.toggleFunds();p.changeFunds(event(1));assert.equal(p.data.funds.items.length,3);assert.equal(p.data.funds.items[2].amount,'—');
-  p.openFund(codeEvent('510022'));p.openFund(codeEvent('000000'));assert.deepEqual(nav,['/pages/fund/index?code=510022']);
+  p.openFund(codeEvent('510022'));p.openFund(codeEvent('000000'));assert.equal(nav.length,1);
+  const dest=new URL(nav[0],'https://unit.test');
+  assert.equal(dest.pathname,'/pages/fund/index');
+  assert.deepEqual(Object.fromEntries(dest.searchParams),{code:'510022',from:'stock',name:'ETF 22',start:dates[0],end:dates[2],unit:'yi'});
   p.toggleWatch();assert.equal(p.data.watched,true);p.backToSearch();assert.equal(p.data.view,'search');assert.equal(p.data.watch[0].code,'600519');assert.equal(calls.length,2);
 });
 
@@ -76,6 +79,20 @@ test('mismatched/stale stock or price responses never overwrite the new selectio
   requests[4].resolve(prices('300750',dates[0],dates[2]));await tick();assert.equal(p.data.priceState,'error');assert.equal(p.data.state,'ready');
   const retry=p.loadOverlay();requests[5].resolve(prices('600519',dates[0],dates[2]));await retry;assert.equal(p.data.priceState,'ready');
   const wrong=p.choosePeriod(event('all'));requests[6].resolve(stock('300750','all'));await wrong;assert.equal(p.data.state,'error');
+});
+
+test('stock to ETF carries the live history version and converts the excluded start to an inclusive date',async()=>{
+  const meta={version:'m1',history_version:'original-h',target_end:dates[2]};
+  const {p,nav}=page((url,params)=>{
+    if(url==='market/meta')return meta;
+    if(url.startsWith('market/stock/')){
+      const d=stock('600519',params.period);d.movement.start_exclusive=true;d.movement.window_start='2026-11-05';return d;
+    }
+    return {...prices('600519',params.start,params.end),market_version:meta.version,history_version:meta.history_version,target_end:meta.target_end};
+  },{mode:'live',stocks:[]});
+  await p.openStock('600519');p.openFund(codeEvent('510021'));
+  const params=new URL(nav[0],'https://unit.test').searchParams;
+  assert.equal(params.get('start'),'2026-11-06');assert.equal(params.get('history_version'),'original-h');
 });
 
 test('live funds and prices must share the verified publication even when the trading date is unchanged',async()=>{

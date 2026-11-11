@@ -84,7 +84,7 @@ async function calendarFor(meta,start,end) {
 function emptyRange() {
   return {
     ready: false, loading: false, error: '', retryable: false, needsNewVersion:false, start: '', end: '',
-    chart: null, chartNotice: '', chartRetry: '', summaryValue: '', summaryLabel: '', coverage: '',
+    chart: null, chartDay:null, chartNotice: '', chartRetry: '', summaryValue: '', summaryLabel: '', coverage: '',
     detailsOpen: false, detailLoading: false, detailError: '', detailRows: [],
     total: 0, detailPage: 1, pageCount: 1
   };
@@ -111,6 +111,7 @@ Page({
     const code = args.code || '';
     this.setData({
       ...emptyRange(), code, name: decoded(args.name) || 'ETF', minDate: '', maxDate: '',
+      backLabel:args.from==='stock'?'返回个股':args.from==='broad'?'返回指数':'返回',dateFiltersOpen:false,
       draftStart: '', draftEnd: '', rangeNote: '', datePending: false, metric: 'flow'
     });
     if (!/^\d{6}$/.test(code)) {
@@ -133,6 +134,8 @@ Page({
   },
 
   goBack() { back(); },
+  toggleDates() {this.setData({dateFiltersOpen:!this.data.dateFiltersOpen});},
+  inspectDay(event){if(this.data.chart && this._readDay)this.setData({chartDay:this._readDay(event.detail.date)});},
 
   async loadLimits(requestedRange) {
     const request = ++this._request;
@@ -277,7 +280,8 @@ Page({
     }
     const value = isFlow ? observed.reduce((sum, row) => sum + row.value, 0) : latest.value;
     this.setData({
-      chart: chartModel(rows, { ...metric, moneyUnit: this._unit }),
+      chart: chartModel(rows, { ...metric, moneyUnit: this._unit },reader=>{this._readDay=reader;}),
+      chartDay:this.data.chartDay && this._readDay ? this._readDay(this.data.chartDay.date) : null,
       chartNotice: '', chartRetry: '', coverage,
       summaryLabel: isFlow ? '期间估算净申赎小计' : '最近有值日' + metric.label,
       summaryValue: isFlow ? money(value, this._unit) : number(value, this.data.metric === 'nav' ? 8 : 2) + ' ' + metric.unit,

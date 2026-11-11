@@ -59,6 +59,7 @@ test('real trading days, true zero and unavailable totals survive into the chart
   assert.equal(page.data.summary.amount,'7500 auto');assert.equal(page.data.summary.direction,'净流入');
   assert.equal(page.data.summary.recent,'2026-11-09');assert.equal(page.data.summary.coverage,'3 / 4 个交易日有值');
   assert.equal(page.data.summary.complete,'资料不足');assert.match(page.data.summary.ending,/2026-11-10.*当日暂无估算/);
+  assert.equal(page.data.summary.partial,true);assert.equal(page.data.summary.lastAmount,'暂无估算');assert.equal(page.data.summary.lastDate,'2026-11-10');
   assert.equal(page.data.chart.rows[1].value,0);assert.equal(page.data.chart.rows[3].value,null);
   assert.equal(page.data.chart.opts.currency,true);assert.equal(page.data.chart.opts.overlayUnit,'点');
   assert.equal(page.data.quote.change,'+20.00%');assert.equal(page.data.quote.span,'2026-11-03 至 2026-11-09');
@@ -66,6 +67,7 @@ test('real trading days, true zero and unavailable totals survive into the chart
   page.changeDate(dateEvent('start','2026-11-06'));page.changeDate(dateEvent('end','2026-11-06'));
   assert.match(page.data.dateNotice,/日期待应用/);assert.equal(calls.length,2);
   await page.applyDates();assert.equal(page.data.summary.amount,'0 auto');assert.equal(page.data.summary.complete,'0 auto');
+  assert.equal(page.data.summary.partial,false);assert.equal(page.data.summary.lastAmount,'0 auto');
   assert.equal(page.data.quote.change,'');assert.match(page.data.quote.span,/仅有一个/);
   page.changeDate(dateEvent('start','2026-11-07'));page.changeDate(dateEvent('end','2026-11-08'));
   await page.applyDates();assert.equal(page.data.summary.complete,'无交易日');assert.equal(page.data.summary.amount,'—');

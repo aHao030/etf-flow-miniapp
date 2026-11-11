@@ -25,6 +25,14 @@ for(const host of ['wechat','xiaohongshu']){
   const meta=require(path.join(target,'lib/snapshot/meta.js')),start=meta.start,end=meta.end;
   await broad.onLoad({code:'000905',start,end});
   assert.equal(broad.data.ready,true);assert.deepEqual(restored(broad.onShareAppMessage()),{code:'000905',start,end});
+  const dates=broad._result.trading_dates;
+  if(dates.length){
+    const day=dates[dates.length-1],record=broad._result.series.at(-1);
+    broad.inspectDay({detail:{date:day}});
+    assert.equal(broad.data.chartDay.date,day);assert.equal(broad.data.chartDay.listed,true);
+    assert.equal(broad.data.chartDay.overlayText.includes('点'),Number.isFinite(record.index_close));
+    broad.inspectDay({detail:{date:''}});assert.equal(broad.data.chartDay,null);
+  }
   broad.onUnload();
   const stock=load('stock');await stock.onLoad({code:'300750',period:'5y'});
   assert.equal(stock.data.state,'ready');assert.deepEqual(restored(stock.onShareAppMessage()),{code:'300750',period:'5y'});

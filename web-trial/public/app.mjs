@@ -171,6 +171,7 @@ function selectStock(code) {
 }
 async function openStock(code) {
   if (!/^\d{6}$/.test(code)) return;
+  $('stock-panel').hidden=false;
   beginPriceHistoryStock(code);
   state.stock = code; const seq = stockGuard.next(); etfGuard.next(); stockData=null;etfData=null;priceData=null;currentChart=null; $('stock-content').hidden = true; $('watch-toggle').hidden = true;
   $('stock-heading').textContent = '正在加载'; $('stock-subtitle').textContent = code; $('stock-status').hidden = false;
@@ -192,8 +193,16 @@ function loadEtf(code) {
 function renderEtf(){
   if(!etfData)return;const d=etfData,box=$('etf-detail');box.hidden=false;
   box.replaceChildren(element('strong',(d.etf_name||'ETF')+' '+d.etf_code),element('div','对 '+(d.stock_name||d.stock_code)+' 的期间估算贡献：'+money(d.flow)),element('div',(d.start||'—')+(d.start_exclusive?'（不含）':'')+' 至 '+(d.end||'—')+' · 有效 '+(d.valid_days??'—')+' 日'),element('div','披露权重 '+formatWeight(d.weight)+' · '+weightLabel(d.weight_source)+' / '+(d.weight_date||'—')),element('div','这是该 ETF 对所选股票的估算贡献；ETF 自身净申赎见基金历史。'));
-  const open=element('button','查看基金完整历史','outline-button');open.type='button';
-  open.addEventListener('click',()=>document.dispatchEvent(new CustomEvent('etf-open-history',{detail:{fund_code:d.etf_code,fund_name:d.etf_name,return_view:'stock'}})));
+  const open=element('button','查看同期基金历史','outline-button');open.type='button';open.id='stock-fund-history';
+  open.addEventListener('click',()=>{
+    let start=d.start;
+    if(d.start_exclusive && start){
+      const first=new Date(start+'T00:00:00Z');
+      if(Number.isFinite(first.getTime())){first.setUTCDate(first.getUTCDate()+1);start=first.toISOString().slice(0,10);}
+    }
+    const range=start&&d.end?{range_start:start,range_end:d.end}:{};
+    document.dispatchEvent(new CustomEvent('etf-open-history',{detail:{fund_code:d.etf_code,fund_name:d.etf_name,return_view:'stock',...range}}));
+  });
   const close=element('button','收起','text-button');close.type='button';close.addEventListener('click',()=>{etfData=null;box.hidden=true;});box.append(open,' ',close);
 }
 async function loadSearch(reset = true) {

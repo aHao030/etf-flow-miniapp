@@ -42,7 +42,7 @@ function renderDateNotice(){
   if(rangeRejected && meta){
     notice.textContent=allowedRange(dates)?'日期已修正，请点击应用。':'日期范围无效：请选择 '+meta.target_start+' 至 '+meta.target_end+'，且开始日期不晚于结束日期。';
   }else if(meta && !sameRange(dates,appliedDates())){
-    notice.textContent='日期待应用。'+(data?'当前结果为 '+data.start+' 至 '+data.end+'。':rangeMessage);
+    notice.textContent='日期待应用。'+(data?'当前结果为 '+data.start+' 至 '+data.end+'。':rangeMessage)+'切换指数或刷新也会应用所填日期。';
   }else{
     notice.textContent=rangeMessage;
   }
@@ -72,8 +72,16 @@ function renderTotal(message='正在读取期间资金…',busy=!data){
   main.append(el('h2',name+' · 期间估算净申赎小计'+(direction?' · '+direction:'')));
   if(!data){main.append(el('strong','—','broad-total-value'));context.append(el('p',message));box.append(main,context);return;}
   main.append(el('strong',money(stats.observedTotal),'broad-total-value '+tone(stats.observedTotal)));
-  const completeness=!data.series.length?'所选期间无交易日。':stats.completeTotal===null?'成员或日期有缺口。':'应有成员与交易日齐全。';
-  context.append(el('p','所选 '+data.start+' 至 '+data.end+' · 最近有效资金日 '+(stats.observed.at(-1)?.trade_date||'暂无'),'broad-total-range'),el('p',data.members.length+' 只已核验 ETF · 份额变化 × 前日净值 · '+completeness,'broad-total-completeness'));
+  const tail=data.series.at(-1),latest=stats.observed.at(-1);
+  context.append(el('p',data.start+' 至 '+data.end,'broad-total-range'));
+  const coverage=stats.completeTotal!==null?'成员齐全':'仅计已披露记录';
+  context.append(el('p','有值 '+stats.observed.length+' / '+data.series.length+' 个交易日 · '+coverage,'broad-total-completeness'));
+  const end=el('p',null,'ledger-last');
+  if(tail){
+    end.append(el('span','期末 '+tail.trade_date),el('strong',Number.isFinite(tail.observed_flow)?money(tail.observed_flow):'当日暂无估算',tone(tail.observed_flow)));
+    if(latest && latest.trade_date!==tail.trade_date)end.append(el('small','最近有效资金日 '+latest.trade_date));
+  }else{end.append(el('span','所选期间无交易日'));}
+  context.append(end);
   box.append(main,context);
 }
 function memberPeriod(row){return data&&row.period_start===data.start&&row.period_end===data.end;}
@@ -258,6 +266,7 @@ async function loadChart(){
 const toolbar=el('div',null,'broad-chart-toolbar'),periods=el('div',null,'period-control'),metrics=el('div',null,'chart-mode');
 periods.setAttribute('role','group');periods.setAttribute('aria-label','宽基监测周期');metrics.hidden=true;metrics.setAttribute('role','group');metrics.setAttribute('aria-label','基金图表指标');
 function renderPeriods(){
+  $('broad-date-trigger').textContent=customRange&&!rangeRejected?'自选期间':'自选日期';
   for(const button of periods.children){
     const active=!customRange && !rangeRejected && Number(button.dataset.months)===period;
     button.classList.toggle('active',active);
@@ -269,6 +278,7 @@ for(const [months,name] of [[1,'1个月'],[3,'3个月'],[12,'1年'],[60,'5年'],
   button.type='button';button.dataset.months=String(months);
   button.addEventListener('click',()=>{
     period=months;customRange=null;rangeRejected=false;
+    $('broad-custom-range').open=false;
     renderPeriods();if(meta)syncDates();loadIndex();
   });
   periods.append(button);
@@ -277,7 +287,15 @@ renderPeriods();
 for(const [key,name] of [['flow','估算净申赎'],['shares','份额'],['nav','净值']]){const b=el('button',name);b.type='button';b.dataset.metric=key;b.addEventListener('click',()=>{metric=key;renderMetrics();loadChart();});metrics.append(b);}
 toolbar.append(periods,metrics);$('broad-toolbar').append(toolbar);
 $('broad-tab').addEventListener('click',show);
-$('history-back')?.addEventListener('click',()=>{if($('history-back').dataset.returnView==='stock')$('stock-tab').click();else show();});
+$('history-back')?.addEventListener('click',()=>{
+  if($('history-back').dataset.returnView==='stock'){
+    $('stock-tab').click();
+    ($('stock-fund-history')||$('stock-tab')).focus();
+  }else{
+    show();
+    ($('broad-open-history').disabled?$('broad-index'):$('broad-open-history')).focus();
+  }
+});
 $('refresh').addEventListener('click',()=>{
   if(meta){if(commitVisibleDates())load();}
   else if(!$('broad-view').hidden)load();
@@ -293,6 +311,7 @@ $('broad-members-next').addEventListener('click',()=>{if(data&&memberPage*member
 $('broad-return-index').addEventListener('click',()=>{if(!data)return;selected=null;metric='flow';renderList();renderMetrics();loadChart();});
 function rejectRange(){
   guard.next();chartGuard.next();offGuard.next();
+  $('broad-custom-range').open=true;
   rangeRejected=true;loading=false;data=null;selected=null;metric='flow';dailyPage=memberPage=offPage=1;
   clearChart();renderPeriods();renderDaily();renderList('请先选择有效日期范围。');renderMetrics();renderTotal('请修改日期后查询。',false);
   for(const id of ['broad-summary','broad-index-quote','broad-offshore-table'])$(id).replaceChildren();
@@ -309,7 +328,13 @@ function commitVisibleDates(){
   return true;
 }
 for(const id of ['broad-start','broad-end'])$(id).addEventListener('input',renderDateNotice);
-$('broad-apply').addEventListener('click',()=>{if(commitVisibleDates())loadIndex();});
+$('broad-apply').addEventListener('click',()=>{
+  if(commitVisibleDates()){
+    $('broad-custom-range').open=false;
+    $('broad-date-trigger').focus();
+    loadIndex();
+  }
+});
 $('broad-open-history').addEventListener('click',()=>{
   if(!data)return;
   const member=data.members.find(row=>row.fund_code===selected);

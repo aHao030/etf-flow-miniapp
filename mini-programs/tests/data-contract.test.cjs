@@ -1,5 +1,18 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {chartModel}=require('../src/lib/chart'),{money,periodStart}=require('../src/lib/format');
+test('exact-day inspection exposes raw observations, registered trading neighbors and true gaps on a grouped chart',()=>{
+  const rows=Array.from({length:110},(_,i)=>{
+    const d=new Date(Date.UTC(2026,0,1+i*2));
+    return {date:d.toISOString().slice(0,10),value:i===1?null:i*10000,overlay:i===0?null:100+i};
+  });
+  let read;
+  const model=chartModel(rows,{currency:true,label:'当日资金',overlayUnit:'元/股',moneyUnit:'wan'},f=>{read=f;});
+  assert.ok(model.grouped);assert.equal(model.points[0].amount,'+2.00 万元');
+  assert.equal(read(rows[0].date).amount,'0.00 万元');assert.equal(read(rows[0].date).prev,'');
+  assert.equal(read(rows[1].date).amount,'暂无记录');assert.equal(read(rows[1].date).overlayText,'101.00 元/股');
+  const gap=read('2026-01-02');assert.equal(gap.listed,false);assert.equal(gap.prev,rows[0].date);assert.equal(gap.next,rows[1].date);
+  assert.equal(read(rows.at(-1).date).next,'');assert.equal(read('1999-01-01'),null);
+});
 const {readFileSync}=require('node:fs'),{deflateRawSync}=require('node:zlib');
 const {runInNewContext}=require('node:vm');
 

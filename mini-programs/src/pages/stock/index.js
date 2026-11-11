@@ -168,7 +168,7 @@ Page({
     };
     const priorLife=this._restoreLife;
     this._stock=null;this._market=null;this._rows=[];this._quotes=null;this._funds=[];this._life=null;
-    this.setData({view:'detail',code,name:code,state:'loading',error:'',chart:null,priceState:'idle',priceNote:'',watchError:'',
+    this.setData({view:'detail',code,name:code,state:'loading',error:'',chart:null,chartDay:null,lifeDay:null,priceState:'idle',priceNote:'',watchError:'',
       dailyOpen:false,fullOpen:false,lifeOpen:false,lifeState:'idle',lifeDailyOpen:false,lifeChart:null,lifeNote:'',
       daily:{items:[],current:1,pages:1},funds:{items:[],current:1,pages:1},top:[]});
     try {
@@ -212,10 +212,12 @@ Page({
     let recent=null;for(let i=this._rows.length-1;i>=0;i--){if(Number.isFinite(this._rows[i].value)){recent=this._rows[i].date;break;}}
     const valid=this._funds.filter(r=>Number.isFinite(r.flow));const top=valid.slice(0,10);
     const max=top.length?Math.max(1,Math.abs(top[0].flow)):1;
+    const endValue=last?.date===m.window_end?last.value:null;
     this.setData({net:money(m.observed_net_flow,unit),netClass:tone(m.observed_net_flow),
+      endAmount:Number.isFinite(endValue)?money(endValue,unit):'暂无估算',endTone:tone(endValue),endDate:m.window_end,
+      recentDate:!Number.isFinite(endValue)?recent:'',
       windowText:m.window_start+(m.start_exclusive?'（不含）':'')+' 至 '+m.window_end,
       coverageText:'有资金记录 '+this._rows.filter(r=>Number.isFinite(r.value)).length+' / '+this._rows.length+' 个交易日',
-      missingNote:last&&last.date===m.window_end&&!Number.isFinite(last.value)?last.date+' 暂无可估算记录'+(recent?'，本期最近有效日 '+recent:''):'',
       fundCount:this._funds.length,validFundCount:valid.length,
       top:top.map(r=>({code:r.etf_code,name:r.etf_name||r.etf_code,amount:money(r.flow,unit),tone:tone(r.flow),width:100*Math.abs(r.flow)/max})),
       funds:this.fundPage(this.data.funds.current)});
@@ -225,8 +227,11 @@ Page({
     const unit=this.data.unit, quotes=this._quotes;
     const rows=this._rows.map(r=>({date:r.date,value:r.value,overlay:quotes&&quotes.closes.has(r.date)?quotes.closes.get(r.date):null}));
     this.setData({chart:chartModel(rows,{kind:'bar',unit:'元',label:'ETF 估算净流入',currency:true,moneyUnit:unit,
-      overlayLabel:'不复权收盘价',overlayUnit:'元/股'}),daily:this.dailyPage(this.data.daily.current)});
+      overlayLabel:'不复权收盘价',overlayUnit:'元/股'},reader=>{this._readDay=reader;}),
+      chartDay:this.data.chartDay && this._readDay ? this._readDay(this.data.chartDay.date) : null,daily:this.dailyPage(this.data.daily.current)});
   },
+  inspectDay(event){if(this.data.chart && this._readDay)this.setData({chartDay:this._readDay(event.detail.date)});},
+  inspectLifeDay(event){if(this.data.lifeChart && this._readLifeDay)this.setData({lifeDay:this._readLifeDay(event.detail.date)});},
   async loadOverlay() {
     if(!this._stock)return;
     const token=++this._quoteToken, d=this._stock, m=d.movement;
@@ -258,7 +263,20 @@ Page({
   },
   toggleFunds(){this.setData({fullOpen:!this.data.fullOpen});},
   changeFunds(e){this.setData({funds:this.fundPage(this.data.funds.current+Number(eventValue(e)))});},
-  openFund(e){const code=e.currentTarget.dataset.code;if(codeOK(code)&&this._funds.some(x=>x.etf_code===code))platform.nav('/pages/fund/index?code='+code);},
+  openFund(e){
+    const code=e.currentTarget.dataset.code;
+    const fund=this._funds.find(row=>row.etf_code===code);
+    if(!codeOK(code)||!fund||!this._stock)return;
+    const m=this._stock.movement;
+    let start=m.window_start;
+    if(m.start_exclusive){
+      const next=new Date(start+'T00:00:00Z');
+      next.setUTCDate(next.getUTCDate()+1);start=next.toISOString().slice(0,10);
+    }
+    const params={code,from:'stock',name:fund.etf_name||code,start,end:m.window_end,unit:this.data.unit};
+    if(this._market)params.history_version=this._market.history;
+    platform.nav('/pages/fund/index?'+Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&'));
+  },
   toggleWatch() {
     if(!this._stock)return;
     const code=this.data.code,watch=readWatch(),had=watch.some(r=>r.code===code);
@@ -283,7 +301,7 @@ Page({
       const p=await api.get('prices/stock/'+code,{start,end});if(token!==this._lifeToken||this._stock!==d)return;
       const result=checkedPrices(p,code,start,end,d.stock_listed_date,this._market);this._life=result;
       const rows=p.trading_dates.map(date=>({date,value:result.closes.has(date)?result.closes.get(date):null}));
-      this.setData({lifeState:'ready',lifeNote:priceLabel(result),lifeChart:chartModel(rows,{kind:'line',unit:'元/股',label:'不复权收盘价',currency:false}),lifeDaily:this.lifePage(1)});
+      this.setData({lifeState:'ready',lifeNote:priceLabel(result),lifeChart:chartModel(rows,{kind:'line',unit:'元/股',label:'不复权收盘价',currency:false},reader=>{this._readLifeDay=reader;}),lifeDay:null,lifeDaily:this.lifePage(1)});
     } catch(e){if(token===this._lifeToken&&this._stock===d)this.setData({lifeState:'error',lifeNote:readableError(e)});}
   },
   lifePage(page) {

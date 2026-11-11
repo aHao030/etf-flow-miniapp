@@ -103,5 +103,11 @@ assert.equal(calls.length,callsBeforePaging,'ETF contribution details never requ
 assert.match(nodes.get('etf-detail').children[1].textContent,/期间估算贡献：—/,'missing contribution is not zero');
 assert.match(nodes.get('etf-detail').children[2].textContent,/2021-01-01（不含）/,'ETF contribution keeps the fund period exclusion boundary');
 assert.match(nodes.get('etf-detail').children[3].textContent,/2026-06-30/);
+let historyEvent;
+document.dispatchEvent=event=>{historyEvent=event;};
+nodes.get('etf-detail').children.find(child=>child.id==='stock-fund-history').click();
+assert.equal(historyEvent.detail.return_view,'stock');
+assert.equal(historyEvent.detail.range_start,'2021-01-02','exclusive stock boundary maps to the next inclusive fund date');
+assert.equal(historyEvent.detail.range_end,'2026-10-30');
 nodes.get('stock-etf-prev').click();assert.equal(nodes.get('etf-body').children.length,20);
 console.log('PASS: formatting, stale responses, search, exact chart axes/date/amount, keyboard date inspection and paginated table');

@@ -34,3 +34,15 @@
 - `miniapp/`、`model/` 和 `docs/` 保存早期模型和客户端。当前双端小程序的源码位于 `mini-programs/`。
 
 随代码保留了 [tiny-inflate 许可](mini-programs/src/lib/vendor/LICENSE)及[旧微信图表组件的第三方声明](third-party/README.md)。
+
+## 后续源码交付
+
+每次完成界面、计算或客户端更新，维护流程会把已验收的源码版本同步到 [项目私有仓库](https://github.com/aHao030/etf-flow-miniapp)。电脑和两端小程序的数据更新仍依照交易日历运行。
+
+在根目录使用 Python 3.11 以上、Git、GitHub CLI 和“从源码开始”中对应的开发环境。GitHub CLI 可使用已登录账号，也可读取 Git Credential Manager 中此仓库的既有授权。把本次已审查的修改提交后，运行以下命令。连续多次本地提交可在同一条命令中按顺序列出完整 SHA。
+
+```powershell
+python tools/publish_source.py --commit (git rev-parse HEAD)
+```
+
+工具读取指定提交，在临时目录验证源码及受影响的测试，核对私有仓库和远端 `main` 后推送。返回的 `commit` 对应 GitHub 上已核实的源码。重复运行同一版本可以直接确认提交号。若同事已更新远端分支，先核对并整合其变更再重试。手机体验、提审与上线分别由各自平台处理。

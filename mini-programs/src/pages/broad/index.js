@@ -74,7 +74,9 @@ function overview(result,unit) {
     start:result.start,end:result.end,recent:lastObserved?lastObserved.trade_date:'暂无',
     coverage:observed.length+' / '+rows.length+' 个交易日有值',
     complete:complete?money(eligible.reduce((sum,row)=>sum+row.estimated_flow,0),unit):rows.length?'资料不足':'无交易日',
-    ending,memberCount:result.members.length
+    ending,memberCount:result.members.length,partial:!complete && observed.length>0,
+    lastDate:last?.trade_date||'',lastAmount:finite(last?.observed_flow)?money(last.observed_flow,unit):'暂无估算',
+    lastTone:tone(last?.observed_flow)
   };
 }
 function pageCount(total) { return Math.max(1,Math.ceil(total/PAGE_SIZE)); }
@@ -149,7 +151,7 @@ Page({
   onUnload() {this._request++;this._offRequest++;},
   clearResult() {
     this._result=null;this._offRequest++;
-    this.setData({ready:false,summary:null,quote:null,chart:null,memberRows:[],dailyRows:[],offRows:[],offBusy:false,offError:'',error:'',dateNotice:''});
+    this.setData({ready:false,summary:null,quote:null,chart:null,chartDay:null,memberRows:[],dailyRows:[],offRows:[],offBusy:false,offError:'',error:'',dateNotice:''});
   },
   async refresh(options={}) {
     const oldMeta=this._meta, originalStart=this.data.start, originalEnd=this.data.end;
@@ -216,7 +218,8 @@ Page({
     const rows=result.series.map(row=>({date:row.trade_date,value:row.observed_flow,overlay:row.index_close}));
     this.setData(Object.assign({
       summary:overview(result,unit),
-      chart:chartModel(rows,{kind:'bar',unit:'元',label:'当日 ETF 估算净申赎小计',overlayLabel:this.data.quote.name,overlayUnit:'点',currency:true,moneyUnit:unit})
+      chart:chartModel(rows,{kind:'bar',unit:'元',label:'当日 ETF 估算净申赎小计',overlayLabel:this.data.quote.name,overlayUnit:'点',currency:true,moneyUnit:unit},reader=>{this._readDay=reader;}),
+      chartDay:this.data.chartDay && this._readDay ? this._readDay(this.data.chartDay.date) : null
     },memberList(result,query,memberPage,unit),dailyList(result,dailyPage,unit)));
   },
   changeIndex(event) {
@@ -226,6 +229,9 @@ Page({
     const dirty=applied && (this.data.start!==applied.start || this.data.end!==applied.end);
     this.setData({indexChoice:choice,code,indexName:this.data.indexNames[choice],query:'',period:dirty?'':this.data.period});
     return this.fetchRange();
+  },
+  inspectDay(event) {
+    if(this.data.chart && this._readDay)this.setData({chartDay:this._readDay(event.detail.date)});
   },
   changePeriod(event) {
     const id=event.currentTarget.dataset.id;
@@ -274,7 +280,7 @@ Page({
     const result=this._result;if(!result)return;
     const code=String(event.currentTarget.dataset.code),member=result.members.find(row=>row.fund_code===code);
     if(!member || !/^\d{6}$/.test(code))return;
-    const parameters={code,name:member.fund_name||code,start:result.start,end:result.end,unit:this.data.unit};
+    const parameters={code,from:'broad',name:member.fund_name||code,start:result.start,end:result.end,unit:this.data.unit};
     const version=result.history_version || this._meta.history_version;
     if(version)parameters.history_version=version;
     nav('/pages/fund/index?'+Object.keys(parameters).map(key=>key+'='+encodeURIComponent(parameters[key])).join('&'));

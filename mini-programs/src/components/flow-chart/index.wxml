@@ -1,8 +1,12 @@
 <view class="graph" wx:if="{{model && model.hasData}}">
-  <view class="read-date">{{point.date}}</view>
-  <view class="read-main"><text>{{model.label}}</text><text class="v {{point.tone}}">{{point.amount}}</text></view>
-  <view wx:if="{{model.overlayLabel}}" class="read-other">{{model.overlayLabel}}　{{point.overlayText}} <text wx:if="{{model.grouped && point.overlayDate}}">（{{point.overlayDate}}）</text></view>
-  <view wx:if="{{point.coverage}}" class="read-other">{{point.coverage}}</view>
+  <view class="read-date">{{day ? day.date : point.date}}</view>
+  <view wx:if="{{day && day.listed && model.grouped}}" class="read-other">单日读数 · 竖线标出所在分组</view>
+  <view wx:if="{{day && !day.listed}}" class="read-main">该日期不在所选交易日历内</view>
+  <block wx:else>
+    <view class="read-main"><text>{{day ? model.dailyLabel : model.label}}</text><text class="v {{day ? day.tone : point.tone}}">{{day ? day.amount : point.amount}}</text></view>
+    <view wx:if="{{model.overlayLabel}}" class="read-other">{{model.overlayLabel}}　{{day ? day.overlayText : point.overlayText}} <text wx:if="{{!day && model.grouped && point.overlayDate}}">（{{point.overlayDate}}）</text></view>
+    <view wx:if="{{!day && point.coverage}}" class="read-other">{{point.coverage}}</view>
+  </block>
   <view class="plot">
     <view wx:if="{{model.zero !== null}}" class="zero" style="top:{{model.zero}}rpx"></view>
     <view wx:for="{{model.segments}}" wx:key="key" class="seg {{item.kind}}" style="{{item.style}}"></view>
@@ -11,13 +15,19 @@
       <view wx:if="{{item.dot}}" class="dot" style="{{item.dotStyle}}"></view>
       <view wx:if="{{item.overDot}}" class="over-dot" style="{{item.overStyle}}"></view>
     </block>
-    <view wx:if="{{point}}" class="guide" style="left:{{point.x}}rpx"></view>
+    <view wx:if="{{point && (!day || day.listed)}}" class="guide" style="left:{{day ? day.x : point.x}}rpx"></view>
     <view class="hits"><view wx:for="{{model.points}}" wx:key="key" class="hit" data-index="{{item.i}}" bindtap="select"></view></view>
   </view>
   <view class="axis"><text>{{model.first}}</text><text>{{model.last}}</text></view>
+  <view class="date-controls">
+    <button data-date="{{day ? day.prev : point.prev}}" disabled="{{day ? !day.prev : !point.prev}}" bindtap="inspectDate">上一交易日</button>
+    <picker mode="date" start="{{model.first}}" end="{{model.last}}" value="{{day ? day.date : point.end}}" bindchange="inspectDate"><view class="date-trigger">按日期查看 ▾</view></picker>
+    <button data-date="{{day ? day.next : point.next}}" disabled="{{day ? !day.next : !point.next}}" bindtap="inspectDate">下一交易日</button>
+  </view>
+  <button wx:if="{{day && model.grouped}}" class="group-back" bindtap="returnToChart">返回分组读数</button>
   <view class="read-other" wx:if="{{model.mainScale}}">{{model.label}}范围　{{model.mainScale}}</view>
   <view class="read-other" wx:if="{{model.overlayScale}}">黑线独立刻度　{{model.overlayLabel}} {{model.overlayScale}}</view>
-  <slider wx:if="{{model.max > 0}}" min="0" max="{{model.max}}" value="{{index}}" step="1" block-size="16" activeColor="var(--color-accent)" backgroundColor="var(--color-track)" bindchanging="select" bindchange="select"/>
+  <slider wx:if="{{model.max > 0}}" min="0" max="{{model.max}}" value="{{day && day.listed ? day.group : index}}" step="1" block-size="16" activeColor="var(--color-accent)" backgroundColor="var(--color-track)" bindchanging="select" bindchange="select"/>
   <text class="help">{{model.action}}</text>
 </view>
 <view wx:else class="empty">所选区间暂无可绘制记录</view>

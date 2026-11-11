@@ -3,6 +3,7 @@
 .fund-name .title, .fund-code, .fund-note, .fund-summary text { display:block; }
 .fund-code { margin-top:var(--spacing-0-5); color:var(--color-text-secondary); }
 .fund-filter { margin-top:var(--spacing-3); }
+.fund-range { font-size:var(--font-size-base); font-weight:600; }
 .fund-back, .fund-dates .button, .fund-detail-head .button, .fund-pager .button { flex:none; }
 .fund-dates { display:flex; align-items:flex-end; gap:var(--spacing-1); }
 .fund-dates picker { flex:1; min-width:0; }

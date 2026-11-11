@@ -53,3 +53,33 @@ test('index-only early history remains visible with missing ETF amounts and sepa
  assert(svg.children.some(n=>n.attributes['data-series']==='index'));assert.equal(svg.children.filter(n=>n.tag==='rect').length,0);
  slider.value='0';slider.listeners.input();assert.match(slider.attributes['aria-valuetext'],/1990-12-19.*99.98 点/);
 });
+
+test('date inspection distinguishes a closed session, a missing amount, and an observed zero',()=>{
+ class Element {
+   constructor(tag){this.tag=tag;this.children=[];this.attributes={};this.style={};this.listeners={};this.clientWidth=390;}
+   append(...nodes){this.children.push(...nodes);}
+   replaceChildren(...nodes){this.children=nodes;}
+   setAttribute(key,value){this.attributes[key]=String(value);}
+   addEventListener(key,handler){this.listeners[key]=handler;}
+   removeEventListener(){}
+ }
+ const original=globalThis.document;
+ try {
+   globalThis.document={createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag)};
+   const dates=['2026-11-06','2026-11-09','2026-11-10'];
+   const box=new Element('div');
+   renderTimeChart(box,[{date:dates[0],value:0},{date:dates[2],value:-20000}],{tradingDates:dates});
+   const frame=box.children[0], amount=frame.children[0].children[1];
+   const controls=frame.children.find(node=>node.className==='chart-day-controls');
+   const [prev,label,next]=controls.children,picker=label.children[0];
+   const status=frame.children.find(node=>node.className==='chart-day-status');
+   assert.equal(picker.value,dates[2]);assert.equal(next.disabled,true);
+   prev.listeners.click();assert.equal(picker.value,dates[1]);assert.equal(amount.textContent,'暂无有效记录');
+   picker.value='2026-11-08';picker.listeners.change();assert.equal(status.hidden,false);
+   assert.match(status.textContent,/2026-11-09/);assert.equal(picker.attributes['aria-invalid'],'true');
+   assert.equal(amount.textContent,'暂无有效记录');
+   picker.value=dates[0];picker.listeners.change();
+   assert.equal(prev.disabled,true);assert.equal(status.hidden,true);assert.match(amount.textContent,/^0\.00 /);
+   next.listeners.click();assert.equal(picker.value,dates[1]);
+ }finally{globalThis.document=original;}
+});

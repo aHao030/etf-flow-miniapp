@@ -1,0 +1,37 @@
+.chart-day-controls {
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+}
+.chart-day-label {
+  display: grid;
+  gap: var(--spacing-1);
+  justify-items: center;
+  min-width: 0;
+  color: var(--muted);
+  font-size: .75rem;
+}
+input.chart-day-picker, button.chart-step {
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  max-width: 100%;
+  min-width: 0;
+  padding-inline: var(--spacing-2);
+  border: thin solid var(--line);
+  border-radius: var(--radius-element);
+  background: var(--color-background-surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: .875rem;
+  font-variant-numeric: tabular-nums;
+}
+button.chart-step { flex-shrink: 0; }
+button.chart-step:disabled { color: var(--muted); opacity: .6; }
+.chart-day-status {
+  margin: 0;
+  padding: 0 var(--spacing-3) var(--spacing-2);
+  color: var(--ink);
+  font-size: .8125rem;
+}

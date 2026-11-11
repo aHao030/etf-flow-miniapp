@@ -93,4 +93,6 @@ setMoneyUnit('auto');
 nodes.get('etf-market').value='SZ'; nodes.get('etf-market').listeners.change(); await settle(); assert(calls.some(x=>x.includes('market=SZ')));
 nodes.get('catalog-next').click(); await settle(); assert(calls.some(x=>x.includes('page=2')&&x.includes('/history/etfs')));
 nodes.get('stock-tab').click(); assert.equal(nodes.get('history-view').hidden,true); assert.equal(nodes.get('stock-view').hidden,false);
+events['etf-open-history']({detail:{...fund('510300'),return_view:'stock',range_start:'2026-10-12',range_end:'2026-10-23'}});
+assert.deepEqual(requested(pending.at(-1)),['510300','2026-10-12','2026-10-23']);
 console.log('PASS: history metadata, catalog, dates, null values, pagination, stale response and safe text');

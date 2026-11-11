@@ -79,15 +79,30 @@ export function renderTimeChart(container, rows, options = {}) {
   const dateText=el('span',null,'viz-date'), amountText=el('strong',null,'viz-value'), overlayText=el('strong',null,'viz-overlay-value'), pointNote=el('span',null,'viz-point-note');
   readout.setAttribute('aria-live','polite'); readout.setAttribute('aria-atomic','true'); readout.append(dateText,amountText);
   if(options.overlay)readout.append(overlayText);if(options.pointNotes)readout.append(pointNote);
-  const help=el('p',note || '按交易日等距排列。移动指针、点击图表或用日期滑块查看准确读数；空白交易日为数据缺失，不代表零。','viz-help');
+  const help=el('p',note || '点图或选择交易日查看读数。空白表示暂无记录。','viz-help');
   const svg=svgEl('svg',{class:'viz-svg',role:'img','aria-label':label+'，有日期与金额刻度，可通过下方滑块逐日查看'});
   const slider=el('input',null,'viz-navigator'); slider.type='range'; slider.min='0'; slider.max=String(points.length-1); slider.step='1'; slider.setAttribute('aria-label',label+'：选择日期');
-  frame.append(readout,svg,help,slider);container.append(frame);
+  const controls=el('div',null,'chart-day-controls');
+  controls.setAttribute('role','group');controls.setAttribute('aria-label',label+'逐日读数');
+  const previousDay=el('button','上一日','chart-step'),nextDay=el('button','下一日','chart-step');
+  previousDay.type=nextDay.type='button';
+  previousDay.setAttribute('aria-label','上一个交易日');nextDay.setAttribute('aria-label','下一个交易日');
+  const dateLabel=el('label','定位交易日','chart-day-label'), datePicker=el('input',null,'chart-day-picker');
+  datePicker.type='date';datePicker.min=points[0].date;datePicker.max=points.at(-1).date;
+  dateLabel.append(datePicker);
+  const dateStatus=el('p',null,'chart-day-status');dateStatus.hidden=true;
+  dateStatus.id=clipId+'-date-status';dateStatus.setAttribute('role','status');
+  datePicker.setAttribute('aria-describedby',dateStatus.id);
+  controls.append(previousDay,dateLabel,nextDay);
+  frame.append(readout,svg,controls,dateStatus,slider,help);container.append(frame);
   let selected=points.findLastIndex(p=>p.value!==null||p.overlay!==null), geometry, cross, dot,overlayDot;
   const span=Math.max(points.at(-1).time-points[0].time,DAY), domain=chartDomain(points,kind);
   if(unit==='元/股'&&valid.length&&valid.every(p=>p.value>=0))domain.min=Math.max(0,domain.min);
   function inspect(index) {
     selected=Math.max(0,Math.min(points.length-1,index));const p=points[selected];slider.value=String(selected);
+    datePicker.value=p.date;datePicker.setAttribute('aria-invalid','false');
+    dateStatus.hidden=true;dateStatus.textContent='';
+    previousDay.disabled=selected===0;nextDay.disabled=selected===points.length-1;
     dateText.textContent=p.date+' · '+label;amountText.textContent=displayAmount(p.value);
     amountText.style.color=directional&&p.value!==null?(p.value>0?INFLOW:p.value<0?OUTFLOW:'#1d1d1f'):'#1d1d1f';
     if(options.overlay)overlayText.textContent=options.overlay.label+' '+exactAmount(p.overlay,overlayUnit,false,overlayDecimals);
@@ -138,6 +153,15 @@ export function renderTimeChart(container, rows, options = {}) {
     const rect=svg.getBoundingClientRect(),px=(event.clientX-rect.left)/rect.width*Math.max(320,container.clientWidth||800);
     inspect(Math.round((px-geometry.left)/geometry.plot*(points.length-1)));
   }
+  previousDay.addEventListener('click',()=>inspect(selected-1));
+  nextDay.addEventListener('click',()=>inspect(selected+1));
+  datePicker.addEventListener('change',()=>{
+    const index=points.findIndex(point=>point.date===datePicker.value);
+    if(index>=0){inspect(index);return;}
+    datePicker.setAttribute('aria-invalid','true');
+    dateStatus.textContent='本图可选 '+points[0].date+' 至 '+points.at(-1).date+' 内的交易日。当前读数仍为 '+points[selected].date+'。';
+    dateStatus.hidden=false;
+  });
   svg.addEventListener('pointermove',pointer);svg.addEventListener('click',pointer);slider.addEventListener('input',()=>inspect(Number(slider.value)));
   draw();let previousWidth=container.clientWidth;
   const observer=typeof ResizeObserver==='undefined'?null:new ResizeObserver(()=>{if(container.clientWidth>0&&Math.abs(container.clientWidth-previousWidth)>2){previousWidth=container.clientWidth;draw();}});
