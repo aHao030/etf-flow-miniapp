@@ -280,7 +280,7 @@ Page({
     }
     const value = isFlow ? observed.reduce((sum, row) => sum + row.value, 0) : latest.value;
     this.setData({
-      chart: chartModel(rows, { ...metric, moneyUnit: this._unit },reader=>{this._readDay=reader;}),
+      chart: chartModel(rows, { ...metric, scope:[this.data.code,this.data.metric,snapshot.start,snapshot.end].join('/'), moneyUnit: this._unit },reader=>{this._readDay=reader;}),
       chartDay:this.data.chartDay && this._readDay ? this._readDay(this.data.chartDay.date) : null,
       chartNotice: '', chartRetry: '', coverage,
       summaryLabel: isFlow ? '期间估算净申赎小计' : '最近有值日' + metric.label,

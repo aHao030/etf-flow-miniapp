@@ -91,7 +91,7 @@ function renderChart(series, movement, preservePage = false) {
   $('chart-end').textContent = end || '终点未知';
   const cumulative=chartMode==='cumulative';
   $('chart-description').textContent=cumulative?'累计已有有效记录，红色为正、绿色为负；不代表缺口期间资金为零，不等于完整周期合计。':'红色为流入，绿色为流出；日期与金额可逐日查看，空白不代表零。';
-  renderTimeChart($('chart'),currentChart.points,{start,end,tradingDates:movement.trading_dates,kind:cumulative?'line':'bar',cumulative,label:cumulative?'已有记录累计':'单日估算净流入',unit:'元',overlay:priceData?{label:'不复权收盘价',unit:'元/股',decimals:2,rows:priceData.series.map(r=>({date:r.trade_date,value:r.close}))}:undefined});
+  renderTimeChart($('chart'),currentChart.points,{instrument:stockData?.stock_code,start,end,tradingDates:movement.trading_dates,kind:cumulative?'line':'bar',cumulative,label:cumulative?'已有记录累计':'单日估算净流入',unit:'元',overlay:priceData?{label:'不复权收盘价',unit:'元/股',decimals:2,rows:priceData.series.map(r=>({date:r.trade_date,value:r.close}))}:undefined});
 }
 async function loadPrice(d, sequence) {
   const movement=d.movement||{}, code=d.stock_code,start=movement.window_start,end=movement.window_end;

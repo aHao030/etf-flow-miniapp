@@ -10,7 +10,7 @@ const ROOT=path.dirname(fileURLToPath(import.meta.url));
 const PLATFORMS=['wechat','xiaohongshu'];
 const PAGES=['broad','stock','fund','about'].map(name=>'pages/'+name+'/index');
 const COMPONENTS=['flow-chart','source-note'].map(name=>'components/'+name+'/index');
-const LIBS=['data','offline','format','chart','platform','updates','vendor/tiny-inflate',
+const LIBS=['data','offline','format','fund-list','chart','platform','updates','vendor/tiny-inflate',
   ...['meta','indices','funds','calendar','off','s300750','s600519'].map(name=>'snapshot/'+name)];
 const ICONS=['broad','stock','about'].flatMap(name=>['assets/'+name+'.png','assets/'+name+'-active.png']);
 const SRC=['app.js','app.json','app.wxss',...ICONS,...LIBS.map(n=>'lib/'+n+'.js'),

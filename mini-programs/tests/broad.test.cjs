@@ -45,7 +45,8 @@ function createPage() {
       number:(value,places)=>Number.isFinite(value)?value.toFixed(places):'—',
       periodStart:(end,months,min)=>{const d=new Date(end+'T00:00:00Z');d.setUTCMonth(d.getUTCMonth()-months);const out=d.toISOString().slice(0,10);return out<min?min:out;}
     },
-    '../../lib/chart':{chartModel:(rows,opts)=>({rows,opts})}
+    '../../lib/chart':{chartModel:(rows,opts)=>({rows,opts})},
+    '../../lib/fund-list':require('../src/lib/fund-list')
   };
   runInNewContext(source,{Page:page=>{definition=page;},require:id=>libs[id]});
   const page={...definition,data:JSON.parse(JSON.stringify(definition.data)),setData(update){Object.assign(this.data,update);}};
@@ -145,4 +146,22 @@ test('off-exchange pages retain missing shares and version failures leave on-exc
   server.handler=(path,params)=>path.includes('/index/')?{...fixture(path,params),trading_dates:[]}:fixture(path,params);
   await page.applyDates();assert.match(page.data.error,/交易日历/);assert.equal(page.data.chart,null);
   server.handler=fixture;await page.refresh();assert.equal(page.data.ready,true);
+});
+
+test('member filters separate directional flow, missing and zero without changing the index; live return retains page',async()=>{
+  const {page,calls,server}=createPage();server.mode='local';await page.onLoad();
+  const initial=page.data.summary.amount, initialCalls=calls.length;
+  page.changeSection(tap('id','members'));page.selectMemberDirection(tap('id','out'));
+  assert.equal(page.data.memberTotal,4);assert(page.data.memberRows.every(row=>row.value<0));
+  page.searchMembers(pick('510300'));assert.equal(page.data.memberTotal,0);
+  page.selectMemberDirection(tap('id','missing'));assert.equal(page.data.memberTotal,1);
+  assert.equal(page.data.memberRows[0].value,null);
+  page.resetMembers();assert.equal(page.data.memberTotal,12);
+  page.memberPage(tap('step',1));assert(page.data.memberRows.some(row=>row.value===0));
+  assert.equal(calls.length,initialCalls);assert.equal(page.data.summary.amount,initial);
+  page.openFund(tap('code',page.data.memberRows[0].code));page.onHide();await page.onShow();
+  assert.equal(page.data.section,'members');assert.equal(page.data.memberPage,2);assert.equal(page.data.memberTotal,12);
+  page.selectMemberDirection(tap('id','in'));page.searchMembers(pick('测试基金11'));
+  page.onHide();await page.onShow();assert.equal(page.data.memberDirection,'in');assert.equal(page.data.memberTotal,1);
+  assert.equal(page.data.memberRows[0].code,'510311');
 });

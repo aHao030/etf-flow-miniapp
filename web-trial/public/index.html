@@ -50,7 +50,9 @@
         <a href="#broad-daily-heading">逐日明细 <span aria-hidden="true">↓</span></a>
       </nav>
       <section class="panel data-section broad-members" aria-labelledby="broad-list-title">
-        <div class="section-heading compact"><div><h2 id="broad-list-title" tabindex="-1">所属 ETF 明细</h2><p>期间金额随上方日期变化。选择基金，查看它的资金曲线。</p></div></div>
+        <div class="section-heading compact"><div><h2 id="broad-list-title" tabindex="-1">所属 ETF 资金分布</h2><p id="broad-drivers-period">正在读取所选期间…</p></div></div>
+        <div id="broad-drivers" class="fund-drivers" hidden></div>
+        <h3 class="member-table-heading" id="broad-table-title">全部成员明细</h3>
         <div class="member-filters"><label class="broad-field" for="broad-search">搜索基金<input id="broad-search" type="search" placeholder="基金名称或代码" maxlength="50"></label><label class="broad-field" for="broad-members-sort">排序<select id="broad-members-sort"><option value="magnitude">金额绝对值从高到低</option><option value="inflow">净流入从高到低</option><option value="outflow">净流出从多到少</option><option value="name">基金名称</option></select></label></div>
         <div id="broad-list" class="broad-list table-scroll"><table class="broad-members-table" aria-labelledby="broad-list-title"><thead id="broad-members-columns" tabindex="-1"><tr><th scope="col">基金</th><th scope="col" class="num">期间估算净申赎</th><th scope="col">日期覆盖</th><th scope="col" class="num">期末当日估算净申赎</th></tr></thead><tbody id="broad-members-body"></tbody></table></div>
         <div class="pagination"><button id="broad-members-prev" type="button" class="outline-button" disabled>上一页</button><span id="broad-members-page">第 1 页</span><button id="broad-members-next" type="button" class="outline-button" disabled>下一页</button></div>

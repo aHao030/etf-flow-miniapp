@@ -1,5 +1,21 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const {chartModel}=require('../src/lib/chart'),{money,periodStart}=require('../src/lib/format');
+test('native group inspection stays on the same dates across units and late prices; a different view starts at latest',()=>{
+  const src=require('node:fs').readFileSync(require.resolve('../src/components/flow-chart/index.js'),'utf8');
+  let def;require('node:vm').runInNewContext(src,{Component:value=>{def=value;}});
+  const page={...def.methods,properties:{},data:{},setData(values){Object.assign(this.data,values);},triggerEvent(){}};
+  const rows=Array.from({length:104},(_,i)=>({date:String(i).padStart(3,'0'),value:i*1e5}));
+  const display=(unit,scope,values=rows)=>{
+    page.properties.model=chartModel(values,{scope,kind:'bar',currency:true,moneyUnit:unit});
+    def.properties.model.observer.call(page,page.properties.model);
+  };
+  display('wan','stock/a');assert.equal(page.data.index,51);
+  page.select({detail:{value:5}});assert.equal(page.data.point.date,'010 至 011');
+  display('yi','stock/a');assert.equal(page.data.index,5);assert.match(page.data.point.amount,/亿元/);
+  display('yi','stock/a',rows.map(row=>({...row,overlay:300})));assert.equal(page.data.index,5);
+  page.properties.day={listed:true,group:3};page.returnToChart();assert.equal(page.data.index,3);
+  display('yi','stock/b');assert.equal(page.data.index,51);
+});
 test('exact-day inspection exposes raw observations, registered trading neighbors and true gaps on a grouped chart',()=>{
   const rows=Array.from({length:110},(_,i)=>{
     const d=new Date(Date.UTC(2026,0,1+i*2));

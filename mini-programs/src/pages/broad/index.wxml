@@ -60,13 +60,16 @@
     </view>
     <view wx:if="{{section === 'members'}}" class="panel b-detail">
       <view class="section-title">所属 ETF</view>
-      <view class="b-line">按所选期间估算净申赎绝对值排序。点基金可查同期历史。</view>
       <input class="b-input" placeholder="搜索基金名称或代码" value="{{query}}" maxlength="50" bindinput="searchMembers" />
+      <view class="fund-filters">
+        <button wx:for="{{directions}}" wx:key="key" class="fund-filter {{memberDirection === item.key ? 'selected' : ''}}" data-id="{{item.key}}" bindtap="selectMemberDirection">{{item.label}}</button>
+      </view>
+      <view class="b-between fund-list-meta"><text>匹配 {{memberTotal}} / {{summary.memberCount}} 只 · 按金额绝对值排序</text><button wx:if="{{query || memberDirection !== 'all'}}" class="fund-reset" bindtap="resetMembers">清除筛选</button></view>
       <button class="b-member" wx:for="{{memberRows}}" wx:key="code" data-code="{{item.code}}" bindtap="openFund">
         <view class="b-member-left"><view class="b-fund-name">{{item.name}}</view><text class="b-line">{{item.code}}</text></view>
         <view class="b-member-right"><view class="b-value {{item.tone}}">{{item.amount}}</view><text class="b-line">{{item.coverage}}</text></view>
       </button>
-      <view wx:if="{{!memberTotal}}" class="b-state">没有匹配的已核验基金。</view>
+      <view wx:if="{{!memberTotal}}" class="b-state">{{summary.memberCount ? '没有符合当前筛选的基金。' : '当前指数尚无已核验成员。'}}</view>
       <view wx:if="{{memberTotal}}" class="b-pages">
         <button class="b-quiet" data-step="-1" disabled="{{memberPage === 1}}" bindtap="memberPage">上一页</button>
         <text>第 {{memberPage}} / {{memberPages}} 页 · {{memberTotal}} 只</text>

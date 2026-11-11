@@ -2,6 +2,7 @@ const api = require('../../lib/data');
 const platform = require('../../lib/platform');
 const {money, number} = require('../../lib/format');
 const {chartModel} = require('../../lib/chart');
+const {fundMatcher,fundDirections} = require('../../lib/fund-list');
 
 const PAGE_SIZE = 20;
 const WATCH_KEY = 'etf-stock-watch-v1';
@@ -91,6 +92,7 @@ Page({
     watch:[], sampleStocks:[], watchError:'', code:'', name:'', watched:false, period:'20d', periods:PERIODS, unit:'auto', units:UNITS,
     state:'idle', error:'', chart:null, priceState:'idle', priceNote:'', dailyOpen:false, fullOpen:false,
     daily:{items:[],current:1,pages:1}, funds:{items:[],current:1,pages:1}, top:[],
+    directions:fundDirections, fundDirection:'all', fundQuery:'',
     lifeOpen:false, lifeState:'idle', lifeNote:'', lifeChart:null, lifeFrom:'', lifeTo:'', lifeDailyOpen:false,
     lifeDaily:{items:[],current:1,pages:1}
   },
@@ -160,6 +162,8 @@ Page({
   retryStock() {return this.openStock(this.data.code,true);},
   async openStock(code,refreshing=false) {
     if(!codeOK(code))return;
+    const sameStock=this.data.view==='detail' && this.data.code===code;
+    const fundPage=refreshing && sameStock ? this.data.funds.current : 1;
     clearTimeout(this._timer);this._searchToken++;this._quoteToken++;this._lifeToken++;
     const token=++this._stockToken, period=this.data.period;
     if(!refreshing)this._restoreLife=null;
@@ -169,8 +173,9 @@ Page({
     const priorLife=this._restoreLife;
     this._stock=null;this._market=null;this._rows=[];this._quotes=null;this._funds=[];this._life=null;
     this.setData({view:'detail',code,name:code,state:'loading',error:'',chart:null,chartDay:null,lifeDay:null,priceState:'idle',priceNote:'',watchError:'',
-      dailyOpen:false,fullOpen:false,lifeOpen:false,lifeState:'idle',lifeDailyOpen:false,lifeChart:null,lifeNote:'',
-      daily:{items:[],current:1,pages:1},funds:{items:[],current:1,pages:1},top:[]});
+      dailyOpen:false,fullOpen:sameStock && this.data.fullOpen,fundQuery:sameStock?this.data.fundQuery:'',
+      fundDirection:sameStock?this.data.fundDirection:'all',lifeOpen:false,lifeState:'idle',lifeDailyOpen:false,lifeChart:null,lifeNote:'',
+      daily:{items:[],current:1,pages:1},funds:{items:[],current:fundPage,pages:1},top:[]});
     try {
       const online=api.sourceInfo().mode!=='snapshot';
       const market=online?marketIdentity(await api.get('market/meta')):null;
@@ -226,7 +231,8 @@ Page({
   renderCombined() {
     const unit=this.data.unit, quotes=this._quotes;
     const rows=this._rows.map(r=>({date:r.date,value:r.value,overlay:quotes&&quotes.closes.has(r.date)?quotes.closes.get(r.date):null}));
-    this.setData({chart:chartModel(rows,{kind:'bar',unit:'元',label:'ETF 估算净流入',currency:true,moneyUnit:unit,
+    const scope=[this.data.code,this.data.period,this._stock.movement.window_start,this._stock.movement.window_end].join('/');
+    this.setData({chart:chartModel(rows,{scope,kind:'bar',unit:'元',label:'ETF 估算净流入',currency:true,moneyUnit:unit,
       overlayLabel:'不复权收盘价',overlayUnit:'元/股'},reader=>{this._readDay=reader;}),
       chartDay:this.data.chartDay && this._readDay ? this._readDay(this.data.chartDay.date) : null,daily:this.dailyPage(this.data.daily.current)});
   },
@@ -256,12 +262,22 @@ Page({
   },
   toggleDaily(){this.setData({dailyOpen:!this.data.dailyOpen});},
   changeDaily(e){this.setData({daily:this.dailyPage(this.data.daily.current+Number(eventValue(e)))});},
-  fundPage(page) {
-    const p=pageOf(this._funds,page);
+  fundPage(page,query=this.data.fundQuery,direction=this.data.fundDirection) {
+    const matches=fundMatcher(query,direction);
+    const p=pageOf(this._funds.filter(row=>matches(row.etf_code,row.etf_name,row.flow)),page);
     p.items=p.items.map(r=>({code:r.etf_code,name:r.etf_name||r.etf_code,amount:money(r.flow,this.data.unit),tone:tone(r.flow),
       weight:Number.isFinite(r.weight)?number(r.weight*100,2)+'%':'—',weightDate:r.weight_date||'未取得',validDays:r.valid_days??'—'}));return p;
   },
   toggleFunds(){this.setData({fullOpen:!this.data.fullOpen});},
+  searchFunds(e){this.filterFunds(String(e.detail.value||'').slice(0,50),this.data.fundDirection);},
+  selectFundDirection(e){
+    const key=eventValue(e);
+    if(fundDirections.some(item=>item.key===key))this.filterFunds(this.data.fundQuery,key);
+  },
+  resetFunds(){this.filterFunds('','all');},
+  filterFunds(fundQuery,fundDirection){
+    if(this._stock)this.setData({fundQuery,fundDirection,funds:this.fundPage(1,fundQuery,fundDirection)});
+  },
   changeFunds(e){this.setData({funds:this.fundPage(this.data.funds.current+Number(eventValue(e)))});},
   openFund(e){
     const code=e.currentTarget.dataset.code;
@@ -301,7 +317,7 @@ Page({
       const p=await api.get('prices/stock/'+code,{start,end});if(token!==this._lifeToken||this._stock!==d)return;
       const result=checkedPrices(p,code,start,end,d.stock_listed_date,this._market);this._life=result;
       const rows=p.trading_dates.map(date=>({date,value:result.closes.has(date)?result.closes.get(date):null}));
-      this.setData({lifeState:'ready',lifeNote:priceLabel(result),lifeChart:chartModel(rows,{kind:'line',unit:'元/股',label:'不复权收盘价',currency:false},reader=>{this._readLifeDay=reader;}),lifeDay:null,lifeDaily:this.lifePage(1)});
+      this.setData({lifeState:'ready',lifeNote:priceLabel(result),lifeChart:chartModel(rows,{scope:[code,start,end].join('/'),kind:'line',unit:'元/股',label:'不复权收盘价',currency:false},reader=>{this._readLifeDay=reader;}),lifeDay:null,lifeDaily:this.lifePage(1)});
     } catch(e){if(token===this._lifeToken&&this._stock===d)this.setData({lifeState:'error',lifeNote:readableError(e)});}
   },
   lifePage(page) {

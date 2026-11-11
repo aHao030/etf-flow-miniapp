@@ -1,5 +1,5 @@
 import {renderTimeChart,exactAmount} from './charts.mjs';
-import {money, latestOnly, onMoneyUnitChange, revealSection} from './logic.mjs';
+import {money, latestOnly, onMoneyUnitChange, resolveMoneyUnit, revealSection} from './logic.mjs';
 const $=id=>document.getElementById(id);
 const guard=latestOnly(), chartGuard=latestOnly(),offGuard=latestOnly();
 let meta=null, indexCode='000300', selected=null, period=3, metric='flow', data=null, offPage=1, customRange=null;
@@ -65,6 +65,7 @@ function periodStats(){
   return {observed,complete,observedTotal:sum(observed,'observed_flow'),completeTotal:eligible.length&&complete.length===eligible.length?sum(complete,'estimated_flow'):null};
 }
 function renderTotal(message='正在读取期间资金…',busy=!data){
+  renderDrivers(message);
   const box=$('broad-total');box.replaceChildren();box.setAttribute('aria-busy',String(busy));
   const main=el('div',null,'broad-total-main'),context=el('div',null,'broad-total-context'),name=meta?selectedIndex()?.name:'所选指数';
   const stats=data?periodStats():null;
@@ -86,6 +87,45 @@ function renderTotal(message='正在读取期间资金…',busy=!data){
 }
 function memberPeriod(row){return data&&row.period_start===data.start&&row.period_end===data.end;}
 function memberAmount(row){return memberPeriod(row)&&Number.isFinite(row.period_observed_flow)?row.period_observed_flow:null;}
+function chooseMember(code){
+  selected=code;renderList();renderMetrics();loadChart();revealSection('broad-heading');
+}
+function renderDrivers(message){
+  const box=$('broad-drivers'),periodLabel=$('broad-drivers-period');
+  box.replaceChildren();box.hidden=!data?.members.length;
+  if(!data){periodLabel.textContent=message;return;}
+  if(!data.members.length){periodLabel.textContent='所选指数暂无已核验的成员映射。';return;}
+  const valid=data.members.filter(row=>memberAmount(row)!==null);
+  const inward=valid.filter(row=>memberAmount(row)>0).sort((a,b)=>memberAmount(b)-memberAmount(a)||a.fund_code.localeCompare(b.fund_code));
+  const outward=valid.filter(row=>memberAmount(row)<0).sort((a,b)=>memberAmount(a)-memberAmount(b)||a.fund_code.localeCompare(b.fund_code));
+  const missing=data.members.length-valid.length,flat=valid.length-inward.length-outward.length;
+  const maximum=valid.reduce((largest,row)=>Math.max(largest,Math.abs(memberAmount(row))),0), unit=resolveMoneyUnit(maximum).unit;
+  periodLabel.textContent=data.start+' 至 '+data.end+' · '+valid.length+' / '+data.members.length+' 只有期间估算'+(missing?' · '+missing+' 只本期暂无金额':'')+(flat?' · '+flat+' 只净额为零':'');
+  if(!valid.length){box.append(el('p','暂无可排名的期间金额。','note'));return;}
+  for(const [title,rows,direction] of [['净流入',inward,'in'],['净流出',outward,'out']]){
+    const group=el('section',null,'drivers-side drivers-'+direction),heading=el('h3',title);
+    heading.append(el('small',rows.length+' 只'));group.append(heading);
+    if(rows.length){
+      const list=el('ol');
+      rows.slice(0,3).forEach(row=>{
+        const amount=memberAmount(row),label=row.fund_name||row.fund_code;
+        const button=el('button',null,'driver-fund');button.type='button';button.dataset.fundCode=row.fund_code;
+        button.setAttribute('aria-label','查看 '+label+' '+row.fund_code+' 的走势，期间'+title+' '+money(amount,unit));
+        button.setAttribute('aria-controls','broad-chart');
+        const identity=el('span',null,'driver-identity');
+        identity.append(el('strong',label),el('small',row.fund_code));
+        const meter=el('meter');meter.min=0;meter.max=maximum;meter.value=Math.abs(amount);
+        meter.setAttribute('aria-hidden','true');
+        button.append(identity,el('b',money(amount,unit),tone(amount)),meter);
+        button.addEventListener('click',()=>chooseMember(row.fund_code));
+        const item=el('li');item.append(button);list.append(item);
+      });
+      group.append(list);
+    }else{group.append(el('p','有记录的基金中无'+title+'。','note'));}
+    box.append(group);
+  }
+  if(inward.length||outward.length)box.append(el('p','每个方向最多列三只，条长按同一金额刻度。','note drivers-caption'));
+}
 function currentMembers(){
   const query=$('broad-search').value.trim(),sort=$('broad-members-sort').value||'magnitude';
   const rows=(data?.members||[]).filter(r=>!query||r.fund_code.includes(query)||(r.fund_name||'').includes(query));
@@ -117,16 +157,22 @@ function renderList(emptyMessage='正在读取基金明细…'){
     open.setAttribute('aria-controls','broad-chart');
     open.setAttribute('aria-pressed',String(selected===row.fund_code));
     open.append(el('strong',row.fund_name||'名称待核验'),el('small',row.fund_code));
-    open.addEventListener('click',()=>{
-      selected=row.fund_code;renderList();renderMetrics();loadChart();revealSection('broad-heading');
-    });
+    open.addEventListener('click',()=>chooseMember(row.fund_code));
     name.append(open);
-    amount.append(el('strong',money(value)),el('small',matches&&Number.isFinite(row.period_complete_flow)?'完整期间估算':'已有记录估算'));
+    amount.append(el('strong',money(value)),el('small',!matches?'期间待核验':value===null?'本期暂无估算':Number.isFinite(row.period_complete_flow)?'完整期间估算':'已有记录估算'));
     coverage.append(el('span',matches?(row.period_valid_days??'—')+' / '+(row.period_expected_days??'未知')+' 日':'待核验'),el('small','有值 / 应有交易日'));
     ending.append(el('strong',money(matches?row.end_date_flow:null),tone(matches?row.end_date_flow:null)),el('small',matches&&row.end_date?row.end_date:'期末日期待核验'));
     tr.append(name,amount,coverage,ending);body.append(tr);
   }
-  if(!members.length){const row=el('tr'),cell=el('td',data.members.length?'没有匹配的 ETF，请修改搜索条件。':'这个指数暂未取得可核验的 ETF 映射，可先查看指数走势。','note');cell.colSpan=4;row.append(cell);body.append(row);}
+  if(!members.length){
+    const row=el('tr'),cell=el('td',data.members.length?'没有匹配的 ETF。':'这个指数暂未取得可核验的 ETF 映射，可先查看指数走势。','note');cell.colSpan=4;
+    if(data.members.length){
+      const clear=el('button','清空搜索','text-button member-clear');clear.type='button';
+      clear.addEventListener('click',()=>{$('broad-search').value='';memberPage=1;renderList();$('broad-search').focus();});
+      cell.append(clear);
+    }
+    row.append(cell);body.append(row);
+  }
   $('broad-members-page').textContent='第 '+memberPage+' / '+pages+' 页 · '+members.length+' 只 ETF · 每页 '+memberPageSize+' 只';$('broad-members-prev').disabled=memberPage<=1;$('broad-members-next').disabled=memberPage>=pages;
 }
 function endMemberCoverage(day){
@@ -258,7 +304,7 @@ async function loadChart(){
     }
     if(!chartGuard.current(sequence))return;
     const benchmark=current.index.benchmark_name||current.index.name;
-    lastChart={rows,options:{start:current.start,end:current.end,tradingDates:current.trading_dates,label,unit,kind,signed:metric==='flow',directional:metric==='flow',decimals:metric==='nav'?8:2,pointNotes:notes,overlay:{label:benchmark+(indexCode==='all'?'（参考基准）':''),unit:'点',rows:current.series.map(r=>({date:r.trade_date,value:r.index_close}))}}};renderCachedChart();
+    lastChart={rows,options:{instrument:member?'fund:'+code:'index:'+indexCode,start:current.start,end:current.end,tradingDates:current.trading_dates,label,unit,kind,signed:metric==='flow',directional:metric==='flow',decimals:metric==='nav'?8:2,pointNotes:notes,overlay:{label:benchmark+(indexCode==='all'?'（参考基准）':''),unit:'点',rows:current.series.map(r=>({date:r.trade_date,value:r.index_close}))}}};renderCachedChart();
     $('broad-legend').textContent=(metric==='flow'?'红色：资金流入　绿色：资金流出':'灰色虚线：'+label)+'　黑线：'+benchmark+'（右轴，点）';
     $('broad-chart-state').textContent=(!member?'ETF 估算净申赎小计，不含成分股实际成交。':'')+'缺失交易日留空。';
   }catch(error){if(chartGuard.current(sequence)){clearChart();$('broad-chart-state').textContent=error.message;}}

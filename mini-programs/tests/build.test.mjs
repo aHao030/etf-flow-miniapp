@@ -13,6 +13,7 @@ function fixture(t) {
   function write(name,body){const dest=path.join(root,name);fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,body);}
   write('version.json',JSON.stringify({appVersion:'1.1.0'}));
   write('src/lib/updates.js','module.exports={};');
+  write('src/lib/fund-list.js','module.exports={};');
   const pages=['broad','stock','fund','about'].map(n=>'pages/'+n+'/index'),components=['flow-chart','source-note'].map(n=>'components/'+n+'/index');
   const icon=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9oITJNsAAAAASUVORK5CYII=','base64');
   const tabs=['broad','stock','about'].map(n=>({pagePath:'pages/'+n+'/index',iconPath:'assets/'+n+'.png',selectedIconPath:'assets/'+n+'-active.png'}));

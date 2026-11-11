@@ -2,6 +2,7 @@ const { get, sourceInfo } = require('../../lib/data');
 const { nav, shareRoute } = require('../../lib/platform');
 const { money, number, periodStart } = require('../../lib/format');
 const { chartModel } = require('../../lib/chart');
+const { fundDirections, fundMatcher } = require('../../lib/fund-list');
 
 const PAGE_SIZE = 10;
 const PERIODS = [{id:'1',name:'1个月'}, {id:'3',name:'3个月'}, {id:'12',name:'1年'}, {id:'60',name:'5年'}, {id:'all',name:'全部'}];
@@ -80,17 +81,19 @@ function overview(result,unit) {
   };
 }
 function pageCount(total) { return Math.max(1,Math.ceil(total/PAGE_SIZE)); }
-function memberList(result,query,page,unit) {
-  const search=query.trim();
-  const matches=result.members.filter(row=>String(row.fund_code).includes(search) || String(row.fund_name||'').includes(search)).map(row=>{
+function memberList(result,query,direction,page,unit) {
+  const matchesFund=fundMatcher(query,direction);
+  const matches=[];
+  for(const row of result.members){
     const scoped=row.period_start===result.start && row.period_end===result.end;
     const value=scoped && finite(row.period_observed_flow)?row.period_observed_flow:null;
-    return {code:row.fund_code,name:row.fund_name||row.fund_code,value,amount:money(value,unit),tone:tone(value),
-      coverage:scoped?count(row.period_valid_days)+' / '+count(row.period_expected_days)+' 日有值':'所选期间覆盖待核验'};
-  });
+    if(matchesFund(row.fund_code,row.fund_name,value))matches.push({code:row.fund_code,name:row.fund_name||row.fund_code,value,
+      coverage:scoped?count(row.period_valid_days)+' / '+count(row.period_expected_days)+' 日有值':'所选期间覆盖待核验'});
+  }
   matches.sort((a,b)=>a.value===null&&b.value!==null?1:b.value===null&&a.value!==null?-1:Math.abs(b.value)-Math.abs(a.value)||String(a.code).localeCompare(String(b.code)));
   const pages=pageCount(matches.length), current=Math.max(1,Math.min(page,pages));
-  return {memberRows:matches.slice((current-1)*PAGE_SIZE,current*PAGE_SIZE),memberPage:current,memberPages:pages,memberTotal:matches.length};
+  const visible=matches.slice((current-1)*PAGE_SIZE,current*PAGE_SIZE).map(row=>({...row,amount:money(row.value,unit),tone:tone(row.value)}));
+  return {memberRows:visible,memberPage:current,memberPages:pages,memberTotal:matches.length};
 }
 function dailyList(result,page,unit) {
   const rows=result.series,pages=pageCount(rows.length),current=Math.max(1,Math.min(page,pages));
@@ -124,7 +127,7 @@ Page({
     periods:PERIODS,sections:SECTIONS,period:'3',section:'chart',unit:'auto',unitIndex:0,unitNames:['自动单位','万元','亿元'],
     indexNames:[],indexCodes:[],indexChoice:0,code:'000300',indexName:'沪深300',start:'',end:'',minDate:'',maxDate:'',
     dateFiltersOpen:false,coverageOpen:false,dateNotice:'',query:'',busy:true,catalogBusy:true,error:'',ready:false,summary:null,chart:null,quote:null,
-    memberRows:[],memberPage:1,memberPages:1,memberTotal:0,dailyRows:[],dailyPage:1,dailyPages:1,dailyTotal:0,
+    directions:fundDirections,memberDirection:'all',memberRows:[],memberPage:1,memberPages:1,memberTotal:0,dailyRows:[],dailyPage:1,dailyPages:1,dailyTotal:0,
     offRows:[],offPage:1,offPages:1,offTotal:0,offBusy:false,offError:''
   },
   onLoad(options = {}) {
@@ -154,6 +157,7 @@ Page({
     this.setData({ready:false,summary:null,quote:null,chart:null,chartDay:null,memberRows:[],dailyRows:[],offRows:[],offBusy:false,offError:'',error:'',dateNotice:''});
   },
   async refresh(options={}) {
+    const returnPage=options.foreground===true ? this.data.memberPage : 1;
     const oldMeta=this._meta, originalStart=this.data.start, originalEnd=this.data.end;
     const prior=this._applied, dirty=prior && (originalStart!==prior.start || originalEnd!==prior.end);
     const keepDraft=options.foreground===true && dirty && !this.data.error;
@@ -180,7 +184,7 @@ Page({
         return;
       }
       this._entryCode=null;
-      await this.fetchRange({start,end});
+      await this.fetchRange({start,end},returnPage);
     } catch (error) {
       if(ticket===this._request){this._meta=null;this.setData({busy:false,catalogBusy:false,error:error.message||'无法读取指数目录，请重试。'});}
     }
@@ -189,7 +193,7 @@ Page({
     this._request++;this.clearResult();
     this.setData({busy:false,catalogBusy:false,period:'',error:'请选择 '+this._meta.target_start+' 至 '+this._meta.target_end+' 之间的日期，开始日期应早于或等于结束日期。'});
   },
-  async fetchRange(range=this.data) {
+  async fetchRange(range=this.data,memberPage=1) {
     if(!this._meta)return this.refresh();
     const {code}=this.data, {start,end}=range, meta=this._meta;
     if(!validRange(start,end,meta))return this.invalidRange();
@@ -201,7 +205,7 @@ Page({
       if(ticket!==this._request)return;
       checkResult(result,meta,code,start,end);
       this._result=result;
-      this.setData({busy:false,ready:true,quote:benchmark(result),memberPage:1,dailyPage:1});
+      this.setData({busy:false,ready:true,quote:benchmark(result),memberPage,dailyPage:1});
       this.renderAmounts();
       this.updateDateNotice();
       this._offPageSize=PAGE_SIZE;this._offWanted=1;
@@ -218,16 +222,16 @@ Page({
     const rows=result.series.map(row=>({date:row.trade_date,value:row.observed_flow,overlay:row.index_close}));
     this.setData(Object.assign({
       summary:overview(result,unit),
-      chart:chartModel(rows,{kind:'bar',unit:'元',label:'当日 ETF 估算净申赎小计',overlayLabel:this.data.quote.name,overlayUnit:'点',currency:true,moneyUnit:unit},reader=>{this._readDay=reader;}),
+      chart:chartModel(rows,{scope:[result.index.code,result.start,result.end].join('/'),kind:'bar',unit:'元',label:'当日 ETF 估算净申赎小计',overlayLabel:this.data.quote.name,overlayUnit:'点',currency:true,moneyUnit:unit},reader=>{this._readDay=reader;}),
       chartDay:this.data.chartDay && this._readDay ? this._readDay(this.data.chartDay.date) : null
-    },memberList(result,query,memberPage,unit),dailyList(result,dailyPage,unit)));
+    },memberList(result,query,this.data.memberDirection,memberPage,unit),dailyList(result,dailyPage,unit)));
   },
   changeIndex(event) {
     const choice=Number(event.detail.value), code=this.data.indexCodes[choice];
     if(!code||this.data.catalogBusy)return;
     const applied=this._applied;
     const dirty=applied && (this.data.start!==applied.start || this.data.end!==applied.end);
-    this.setData({indexChoice:choice,code,indexName:this.data.indexNames[choice],query:'',period:dirty?'':this.data.period});
+    this.setData({indexChoice:choice,code,indexName:this.data.indexNames[choice],query:'',memberDirection:'all',period:dirty?'':this.data.period});
     return this.fetchRange();
   },
   inspectDay(event) {
@@ -266,12 +270,18 @@ Page({
     if(SECTIONS.some(item=>item.id===section))this.setData({section});
   },
   searchMembers(event) {
-    const query=event.detail.value||'';
-    this.setData({query});
-    if(this._result)this.setData(memberList(this._result,query,1,this.data.unit));
+    this.filterMembers(String(event.detail.value||'').slice(0,50),this.data.memberDirection);
+  },
+  selectMemberDirection(event) {
+    const direction=event.currentTarget.dataset.id;
+    if(fundDirections.some(item=>item.key===direction))this.filterMembers(this.data.query,direction);
+  },
+  resetMembers() {this.filterMembers('','all');},
+  filterMembers(query,memberDirection) {
+    if(this._result)this.setData({query,memberDirection,...memberList(this._result,query,memberDirection,1,this.data.unit)});
   },
   memberPage(event) {
-    if(this._result)this.setData(memberList(this._result,this.data.query,this.data.memberPage+Number(event.currentTarget.dataset.step),this.data.unit));
+    if(this._result)this.setData(memberList(this._result,this.data.query,this.data.memberDirection,this.data.memberPage+Number(event.currentTarget.dataset.step),this.data.unit));
   },
   dailyPage(event) {
     if(this._result)this.setData(dailyList(this._result,this.data.dailyPage+Number(event.currentTarget.dataset.step),this.data.unit));

@@ -79,7 +79,7 @@ function renderHistoryChart() {
   const metric = metrics[historyMetric];
   if (chartCleanup) chartCleanup();
   chartCleanup = renderTimeChart($('history-chart'),chartData.series.map(row=>({date:row.trade_date,value:row[metric.key]})),{
-    start:chartData.start,end:chartData.end,tradingDates:chartData.trading_dates,...metric
+    instrument:state.code,start:chartData.start,end:chartData.end,tradingDates:chartData.trading_dates,...metric
   });
   $('history-chart-state').textContent = '图表覆盖所选完整范围，共 '+formatNumber(chartData.total)+' 个观测日期；下方表格按页展示。';
 }

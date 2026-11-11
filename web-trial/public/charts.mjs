@@ -2,6 +2,7 @@
 import {resolveMoneyUnit} from './logic.mjs';
 const DAY = 86400000, NS = 'http://www.w3.org/2000/svg';
 const owners = new WeakMap();
+const inspectedDates = new WeakMap();
 let chartId=0;
 const INFLOW='#c63536', OUTFLOW='#167451';
 // Weekends are known closures. Any unobserved weekday breaks a line conservatively.
@@ -69,6 +70,9 @@ export function renderTimeChart(container, rows, options = {}) {
   const isFlow=unit==='元'&&options.signed!==false;
   const directional=options.directional??(kind==='bar'||cumulative), clipId='negative-chart-'+(++chartId);
   const points=prepareTradingObservations(rows,options), valid=points.filter(p=>p.value!==null);
+  const scope=options.instrument ? JSON.stringify([options.instrument,options.start??points[0]?.date,options.end??points.at(-1)?.date]) : null;
+  const previous=inspectedDates.get(container);
+  if(previous && previous.scope!==scope)inspectedDates.delete(container);
   const moneyScale=resolveMoneyUnit(valid.reduce((maximum,p)=>Math.max(maximum,Math.abs(p.value)),0),options.moneyUnit);
   const displayAmount=value=>isFlow?flowAmount(value,true,moneyScale.unit):exactAmount(value,unit,options.signed!==false,options.decimals??2);
   const hasOverlay=points.some(p=>p.overlay!==null), overlayDomain=chartDomain(points.map(p=>({value:p.overlay})),'line');
@@ -95,7 +99,8 @@ export function renderTimeChart(container, rows, options = {}) {
   datePicker.setAttribute('aria-describedby',dateStatus.id);
   controls.append(previousDay,dateLabel,nextDay);
   frame.append(readout,svg,controls,dateStatus,slider,help);container.append(frame);
-  let selected=points.findLastIndex(p=>p.value!==null||p.overlay!==null), geometry, cross, dot,overlayDot;
+  const savedIndex=scope && previous?.scope===scope ? points.findIndex(p=>p.date===previous.date) : -1;
+  let selected=savedIndex>=0 ? savedIndex : points.findLastIndex(p=>p.value!==null||p.overlay!==null), geometry, cross, dot,overlayDot;
   const span=Math.max(points.at(-1).time-points[0].time,DAY), domain=chartDomain(points,kind);
   if(unit==='元/股'&&valid.length&&valid.every(p=>p.value>=0))domain.min=Math.max(0,domain.min);
   function inspect(index) {
@@ -151,18 +156,24 @@ export function renderTimeChart(container, rows, options = {}) {
   }
   function pointer(event) {
     const rect=svg.getBoundingClientRect(),px=(event.clientX-rect.left)/rect.width*Math.max(320,container.clientWidth||800);
-    inspect(Math.round((px-geometry.left)/geometry.plot*(points.length-1)));
+    choose(Math.round((px-geometry.left)/geometry.plot*(points.length-1)));
   }
-  previousDay.addEventListener('click',()=>inspect(selected-1));
-  nextDay.addEventListener('click',()=>inspect(selected+1));
+  // An explicit reading survives formatting changes and late price overlays.
+  // A chart the reader has never inspected continues to follow the latest data.
+  function choose(index) {
+    inspect(index);
+    if(scope)inspectedDates.set(container,{scope,date:points[selected].date});
+  }
+  previousDay.addEventListener('click',()=>choose(selected-1));
+  nextDay.addEventListener('click',()=>choose(selected+1));
   datePicker.addEventListener('change',()=>{
     const index=points.findIndex(point=>point.date===datePicker.value);
-    if(index>=0){inspect(index);return;}
+    if(index>=0){choose(index);return;}
     datePicker.setAttribute('aria-invalid','true');
     dateStatus.textContent='本图可选 '+points[0].date+' 至 '+points.at(-1).date+' 内的交易日。当前读数仍为 '+points[selected].date+'。';
     dateStatus.hidden=false;
   });
-  svg.addEventListener('pointermove',pointer);svg.addEventListener('click',pointer);slider.addEventListener('input',()=>inspect(Number(slider.value)));
+  svg.addEventListener('pointermove',pointer);svg.addEventListener('click',pointer);slider.addEventListener('input',()=>choose(Number(slider.value)));
   draw();let previousWidth=container.clientWidth;
   const observer=typeof ResizeObserver==='undefined'?null:new ResizeObserver(()=>{if(container.clientWidth>0&&Math.abs(container.clientWidth-previousWidth)>2){previousWidth=container.clientWidth;draw();}});
   observer?.observe(container);

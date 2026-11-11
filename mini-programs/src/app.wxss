@@ -24,4 +24,9 @@ button[disabled] { opacity: .55; }
 button.button, .chip.active { background: var(--color-accent); color: var(--color-on-accent); }
 .chips { display: flex; flex-wrap: wrap; gap: var(--spacing-1); }
 .chip { margin: 0; padding: var(--spacing-1) var(--spacing-2); font-size: var(--font-size-sm); }
+.fund-filters { display:flex; gap:var(--spacing-1); padding:var(--spacing-0-5); background:var(--color-background-muted); border-radius:var(--radius-element); }
+.fund-filter { flex:1; min-width:0; padding-inline:0; color:var(--color-text-secondary); font-size:var(--font-size-sm); }
+.fund-filter.selected { color:var(--color-on-accent); background:var(--color-accent); font-weight:600; }
+.fund-list-meta { min-height:var(--touch-min); font-size:var(--font-size-sm); color:var(--color-text-secondary); }
+.fund-reset { flex:none; background:transparent; font-size:var(--font-size-sm); padding-inline:var(--spacing-1); }
 input { height: var(--touch-min); padding: var(--spacing-1) var(--spacing-2); border-radius: var(--radius-element); border: 1rpx solid var(--color-border-emphasized); background: var(--color-background-surface); }

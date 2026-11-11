@@ -54,7 +54,7 @@ test('index-only early history remains visible with missing ETF amounts and sepa
  slider.value='0';slider.listeners.input();assert.match(slider.attributes['aria-valuetext'],/1990-12-19.*99.98 点/);
 });
 
-test('date inspection distinguishes a closed session, a missing amount, and an observed zero',()=>{
+function installChartDOM(t) {
  class Element {
    constructor(tag){this.tag=tag;this.children=[];this.attributes={};this.style={};this.listeners={};this.clientWidth=390;}
    append(...nodes){this.children.push(...nodes);}
@@ -64,10 +64,14 @@ test('date inspection distinguishes a closed session, a missing amount, and an o
    removeEventListener(){}
  }
  const original=globalThis.document;
- try {
-   globalThis.document={createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag)};
+ t.after(()=>{globalThis.document=original;});
+ globalThis.document={createElement:tag=>new Element(tag),createElementNS:(_,tag)=>new Element(tag)};
+ return new Element('div');
+}
+
+test('date inspection distinguishes a closed session, a missing amount, and an observed zero',t=>{
+   const box=installChartDOM(t);
    const dates=['2026-11-06','2026-11-09','2026-11-10'];
-   const box=new Element('div');
    renderTimeChart(box,[{date:dates[0],value:0},{date:dates[2],value:-20000}],{tradingDates:dates});
    const frame=box.children[0], amount=frame.children[0].children[1];
    const controls=frame.children.find(node=>node.className==='chart-day-controls');
@@ -81,5 +85,24 @@ test('date inspection distinguishes a closed session, a missing amount, and an o
    picker.value=dates[0];picker.listeners.change();
    assert.equal(prev.disabled,true);assert.equal(status.hidden,true);assert.match(amount.textContent,/^0\.00 /);
    next.listeners.click();assert.equal(picker.value,dates[1]);
- }finally{globalThis.document=original;}
+});
+
+test('a display-only redraw retains the inspected trading day, including a missing observation',t=>{
+ const box=installChartDOM(t),dates=['2026-11-02','2026-11-03','2026-11-04'];
+ const rows=[{date:dates[0],value:150000000},{date:dates[2],value:-10000}];
+ function render(extra={}) {
+   renderTimeChart(box,rows,{instrument:'index:000300',start:dates[0],end:dates[2],tradingDates:dates,...extra});
+   const frame=box.children[0],controls=frame.children.find(node=>node.className==='chart-day-controls');
+   return {picker:controls.children[1].children[0],amount:frame.children[0].children[1],overlay:frame.children[0].children[2]};
+ }
+ function select(result,date){result.picker.value=date;result.picker.listeners.change();}
+ let view=render({moneyUnit:'yi'});
+ select(view,dates[0]);assert.equal(view.amount.textContent,'+1.50 亿元');
+ view=render({moneyUnit:'wan'});assert.equal(view.picker.value,dates[0]);assert.equal(view.amount.textContent,'+15,000.00 万元');
+ select(view,dates[1]);
+ view=render({overlay:{label:'指数',unit:'点',rows:[{date:dates[1],value:3000}]}});
+ assert.equal(view.picker.value,dates[1]);assert.equal(view.amount.textContent,'暂无有效记录');
+ assert.match(view.overlay.textContent,/3,000 点/);
+ assert.equal(render({instrument:'index:000905'}).picker.value,dates[2]);
+ select(render(),dates[0]);assert.equal(render({start:dates[1]}).picker.value,dates[2]);
 });

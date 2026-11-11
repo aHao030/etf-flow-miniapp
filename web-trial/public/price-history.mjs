@@ -34,7 +34,7 @@ function render(){
   if(!data)return;
   if(cleanup)cleanup();
   cleanup=renderTimeChart($('price-history-chart'),data.series.map(row=>({date:row.trade_date,value:row.close})),{
-    start:data.start,end:data.end,tradingDates:data.trading_dates,preserveHistoricalSessions:true,kind:'line',unit:'元/股',signed:false,directional:false,decimals:2,label:'不复权日收盘价',
+    instrument:data.stock_code,start:data.start,end:data.end,tradingDates:data.trading_dates,preserveHistoricalSessions:true,kind:'line',unit:'元/股',signed:false,directional:false,decimals:2,label:'不复权日收盘价',
     note:'按来源日历中已核验的开市日展示；停牌或来源缺失留空，休市日不占位置。'
   });
   renderTable();

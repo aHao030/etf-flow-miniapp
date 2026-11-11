@@ -414,3 +414,25 @@
   #stock-view .sidebar{display:flex;flex-direction:column}
   #stock-view .sidebar:has(.watch-list:empty) .rank-panel{order:-1}
 }
+
+/* The strips on both sides share the largest observed absolute member flow. */
+.fund-drivers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--spacing-2) var(--spacing-6);margin:var(--spacing-4) 0}
+.drivers-side{min-width:0;--driver-ink:var(--inflow)}
+.drivers-out{--driver-ink:var(--outflow)}
+.drivers-side h3{display:flex;gap:var(--spacing-2);align-items:baseline;margin:0 0 var(--spacing-1);padding-block-end:var(--spacing-2);border-bottom:thin solid var(--line);font-size:var(--font-size-base)}
+.drivers-side h3 small,.driver-identity small,.drivers-caption{color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
+.drivers-side ol{list-style:none;margin:0;padding:0}
+.drivers-side li+li{border-top:thin solid var(--line)}
+.driver-fund{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:var(--spacing-1) var(--spacing-2);width:100%;min-height:2.75rem;background:transparent;border:0;border-radius:var(--radius-inner);padding:var(--spacing-2) var(--spacing-1);text-align:start;color:var(--ink)}
+.driver-fund:hover,.driver-fund:focus-visible{background:var(--soft)}
+.driver-identity{display:flex;flex-wrap:wrap;gap:0 var(--spacing-2);align-items:baseline;min-width:0}
+.driver-identity strong,.driver-fund b{overflow-wrap:anywhere;line-height:1.4}
+.driver-fund b{font-size:var(--font-size-sm);font-variant-numeric:tabular-nums;text-align:end}
+.driver-fund meter{grid-column:1/-1;appearance:none;display:block;width:100%;height:var(--spacing-1);border:0;border-radius:var(--radius-full);background:var(--soft)}
+.driver-fund meter::-webkit-meter-bar{background:var(--soft);border:0;border-radius:var(--radius-full)}
+.driver-fund meter::-webkit-meter-optimum-value{background:var(--driver-ink);border-radius:var(--radius-full)}
+.driver-fund meter::-moz-meter-bar{background:var(--driver-ink);border-radius:var(--radius-full)}
+.fund-drivers .drivers-caption{grid-column:1/-1;margin:0}
+.member-table-heading{margin:var(--spacing-4) 0 0;border-top:thin solid var(--line);padding-block-start:var(--spacing-4)}
+.member-clear{margin-inline-start:var(--spacing-2);min-height:2.75rem}
+@media(max-width:45rem){.fund-drivers{grid-template-columns:minmax(0,1fr);gap:var(--spacing-3)}}

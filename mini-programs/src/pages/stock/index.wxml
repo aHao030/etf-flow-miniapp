@@ -56,12 +56,19 @@
         </block>
       </view>
       <view class="panel stack">
-        <view class="section-title">ETF 来源</view><view class="muted">按贡献绝对值排列 · 展示 {{top.length}} / {{validFundCount}} 只有金额记录的基金</view>
+        <view class="section-title">ETF 来源</view>
+        <button wx:if="{{fundCount}}" class="stock-outline" bindtap="toggleFunds">{{fullOpen ? '返回贡献前十' : '查找全部 ETF'}}（{{fundCount}} 只）</button>
+        <block wx:if="{{!fullOpen}}"><view class="muted">按贡献绝对值排列 · 展示 {{top.length}} / {{validFundCount}} 只有金额记录的基金</view>
         <view wx:if="{{!top.length}}" class="muted">本期暂无可估算的 ETF 贡献。</view>
         <button class="stock-source" wx:for="{{top}}" wx:key="code" data-code="{{item.code}}" bindtap="openFund"><view class="stock-between"><text>{{item.name}} {{item.code}}</text><text class="{{item.tone}}">{{item.amount}}</text></view><view class="stock-track"><view class="stock-bar {{item.tone}}" style="width:{{item.width}}%;"></view></view></button>
-        <button wx:if="{{fundCount}}" class="stock-outline" bindtap="toggleFunds">{{fullOpen ? '收起完整明细' : '查看全部 ETF 明细'}}（{{fundCount}} 只）</button>
-        <block wx:if="{{fullOpen}}"><button wx:for="{{funds.items}}" wx:key="code" class="stock-source" data-code="{{item.code}}" bindtap="openFund"><view class="stock-between"><text>{{item.name}} {{item.code}}</text><text class="{{item.tone}}">{{item.amount}}</text></view><view class="muted">披露权重 {{item.weight}} · {{item.weightDate}} · 有效 {{item.validDays}} 日 ›</view></button>
-          <view class="stock-pager"><button disabled="{{funds.current === 1}}" data-value="-1" bindtap="changeFunds">上一页</button><text>{{funds.current}} / {{funds.pages}}</text><button disabled="{{funds.current === funds.pages}}" data-value="1" bindtap="changeFunds">下一页</button></view>
+        </block>
+        <block wx:else>
+          <input placeholder="搜索关联 ETF 名称或代码" value="{{fundQuery}}" maxlength="50" bindinput="searchFunds" />
+          <view class="fund-filters"><button wx:for="{{directions}}" wx:key="key" class="fund-filter {{fundDirection === item.key ? 'selected' : ''}}" data-value="{{item.key}}" bindtap="selectFundDirection">{{item.label}}</button></view>
+          <view class="stock-between fund-list-meta"><text>匹配 {{funds.total}} / {{fundCount}} 只 · 按个股贡献筛选</text><button wx:if="{{fundQuery || fundDirection !== 'all'}}" class="fund-reset" bindtap="resetFunds">清除筛选</button></view>
+          <view wx:if="{{!funds.total}}" class="muted">没有符合当前筛选的基金。</view>
+          <button wx:for="{{funds.items}}" wx:key="code" class="stock-source" data-code="{{item.code}}" bindtap="openFund"><view class="stock-between"><text>{{item.name}} {{item.code}}</text><text class="{{item.tone}}">{{item.amount}}</text></view><view class="muted">披露权重 {{item.weight}} · {{item.weightDate}} · 有效 {{item.validDays}} 日 ›</view></button>
+          <view wx:if="{{funds.pages > 1}}" class="stock-pager"><button disabled="{{funds.current === 1}}" data-value="-1" bindtap="changeFunds">上一页</button><text>{{funds.current}} / {{funds.pages}}</text><button disabled="{{funds.current === funds.pages}}" data-value="1" bindtap="changeFunds">下一页</button></view>
         </block>
       </view>
       <view class="panel stack">

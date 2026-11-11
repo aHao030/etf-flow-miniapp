@@ -58,7 +58,7 @@ function chartModel(rows, opts = {}, registerDayReader) {
       coverage:size>1?(bar?'组内有值 '+g.count+' / '+g.days+' 日':('组内末次有效日期 '+(g.valueDate||'—'))):'',overlayDate:g.overlayDate});
   });
   const label=opts.label||'数值';
-  return {points,segments,hasData:ys.length+os.length>0,dailyLabel:label,label:size===1?label:(bar?'组内合计 · ':'组内末次 · ')+label.replace(/^(当日|单日|每日)\s*/,''),overlayLabel:opts.overlayLabel||'',
+  return {scope:opts.scope,points,segments,hasData:ys.length+os.length>0,dailyLabel:label,label:size===1?label:(bar?'组内合计 · ':'组内末次 · ')+label.replace(/^(当日|单日|每日)\s*/,''),overlayLabel:opts.overlayLabel||'',
     mainScale:ys.length?valueText(Math.min.apply(null,ys))+' 至 '+valueText(Math.max.apply(null,ys)):'',
     overlayScale:os.length?number(Math.min.apply(null,os),2)+' 至 '+number(Math.max.apply(null,os),2)+' '+(opts.overlayUnit||'点'):'',
     first:input.length?input[0].date:'',last:input.length?input[input.length-1].date:'',

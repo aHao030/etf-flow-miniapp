@@ -24,6 +24,7 @@ function prices(code,start,end,allDates=dates) {
 function page(get,info={mode:'snapshot',stocks:[]}) {
   const calls=[],nav=[],saved={},charts=[];let definition;
   const libraries={
+    '../../lib/fund-list':require('../src/lib/fund-list'),
     '../../lib/data':{get:(url,params)=>{calls.push({url,params});return get(url,params);},sourceInfo:()=>info},
     '../../lib/platform':{nav:url=>nav.push(url),storageGet:key=>saved[key],storageSet:(key,v)=>saved[key]=v},
     '../../lib/format':{money:(n,u)=>Number.isFinite(n)?n+' '+u:'—',number:(n,d)=>n.toFixed(d)},
@@ -68,6 +69,31 @@ test('funds load before prices, unit and pagination reuse data, full list naviga
   assert.equal(dest.pathname,'/pages/fund/index');
   assert.deepEqual(Object.fromEntries(dest.searchParams),{code:'510022',from:'stock',name:'ETF 22',start:dates[0],end:dates[2],unit:'yi'});
   p.toggleWatch();assert.equal(p.data.watched,true);p.backToSearch();assert.equal(p.data.view,'search');assert.equal(p.data.watch[0].code,'600519');assert.equal(calls.length,2);
+});
+
+test('searching all ETF sources preserves context on live fund return and clamps a shorter new list',async()=>{
+  let count=23;
+  const {p,calls}=page(async(url,params)=>{
+    if(url==='market/meta')return {version:'m1',history_version:'h1',target_end:dates[2]};
+    if(url.startsWith('market/stock/')){
+      const data=stock(url.split('/').pop(),params.period);data.etf_contributions=data.etf_contributions.slice(0,count);return data;
+    }
+    return {...prices('600519',params.start,params.end),market_version:'m1',history_version:'h1',target_end:dates[2]};
+  },{mode:'local',stocks:[]});
+  await p.openStock('600519');await tick();p.toggleFunds();
+  const requests=calls.length,headline=p.data.net;
+  p.selectFundDirection(event('out'));assert.equal(p.data.funds.total,1);assert.equal(p.data.funds.items[0].code,'510021');
+  p.searchFunds({detail:{value:'etf 22'}});assert.equal(p.data.funds.total,0);
+  p.selectFundDirection(event('missing'));assert.equal(p.data.funds.items[0].code,'510022');
+  assert.equal(p.data.net,headline);assert.equal(calls.length,requests);
+  p.openFund(codeEvent('510022'));p.onHide();await p.onShow();await tick();
+  assert.equal(p.data.fullOpen,true);assert.equal(p.data.fundQuery,'etf 22');assert.equal(p.data.fundDirection,'missing');
+  assert.equal(p.data.funds.items[0].amount,'—');
+  p.resetFunds();p.changeFunds(event(1));assert.equal(p.data.funds.current,2);assert(p.data.funds.items.some(row=>row.code==='510000'));
+  p.onHide();await p.onShow();await tick();assert.equal(p.data.funds.current,2);
+  count=4;p.onHide();await p.onShow();await tick();assert.equal(p.data.funds.current,1);assert.equal(p.data.funds.total,4);
+  p.searchFunds({detail:{value:'510000'}});await p.openStock('300750');await tick();
+  assert.equal(p.data.fullOpen,false);assert.equal(p.data.fundQuery,'');assert.equal(p.data.fundDirection,'all');
 });
 
 test('mismatched/stale stock or price responses never overwrite the new selection',async()=>{
