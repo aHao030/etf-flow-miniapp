@@ -13,6 +13,11 @@ document.getElementById('stock-tab').addEventListener('click',()=>{document.getE
 globalThis.__broadRender=(container,rows,options)=>{renderings.push({rows,options});container.append(new Node('svg'));};
 const response=data=>({ok:true,json:async()=>({code:0,data})});
 let hold=false,version='v1',offVersion='v1',dense=false,many=false,fixtureFlow=10000;
+let linkedHistory='h1',sourceMode='normal';
+const sourcePending=[];
+function historyMetadata(historyVersion=linkedHistory, day='2026-11-06') {
+ return {version:historyVersion,target_start:'2021-01-01',target_end:'2026-11-09',generated_at:'2026-11-09T08:00:00Z',data_dates:{shares:{date:day,count:2},nav:{date:'2026-11-05',count:1},flow:{date:'2026-11-05',count:1}}};
+}
 const members=[{fund_code:'510300',fund_name:'沪深300ETF',estimated_flow:10000,flow_date:'2026-11-09',listed_date:'2012-05-28'},{fund_code:'159919',fund_name:'沪深300ETF深',estimated_flow:null}];
 function indexResponse(u){
  const start=u.searchParams.get('start'),end=u.searchParams.get('end');
@@ -25,10 +30,14 @@ function indexResponse(u){
 }
 globalThis.fetch=async url=>{
  const u=new URL(url,'https://local.test');calls.push(u);
- if(u.pathname==='/api/v1/broad/meta')return response({version:'v1',target_start:'1990-12-19',target_end:'2026-11-09',indexes:[{code:'000300',name:'沪深300',fund_count:2},{code:'000001',name:'上证综指',fund_count:0}],total:{observed_flow:10000,expected_funds:2},notes:['成员映射未必覆盖全市场']});
+ if(u.pathname==='/api/v1/broad/meta')return response({version,history_version:linkedHistory,target_start:'1990-12-19',target_end:'2026-11-09',indexes:[{code:'000300',name:'沪深300',fund_count:2,available_end:'2026-11-06'},{code:'000001',name:'上证综指',fund_count:0,available_end:'2026-11-05'}],total:{observed_flow:10000,expected_funds:2},notes:['成员映射未必覆盖全市场']});
  if(u.pathname.includes('/broad/index/')){if(hold)return new Promise(resolve=>pending.push({u,resolve}));const result=indexResponse(u);Object.assign(result.off_exchange,{total:21,page:1,page_size:20});return response(result);}
  if(u.pathname.includes('/broad/off/'))return response({...indexResponse(u).off_exchange,version:offVersion,start:u.searchParams.get('start'),end:u.searchParams.get('end'),total:21,page:Number(u.searchParams.get('page')),page_size:20});
- if(u.pathname==='/api/v1/history/meta')return response({version:'h1',target_start:'2021-01-01',target_end:'2026-11-09'});
+ if(u.pathname==='/api/v1/history/meta'){
+  if(sourceMode==='deferred')return new Promise(resolve=>sourcePending.push(resolve));
+  if(sourceMode==='failure')throw Error('来源日期暂不可读');
+  return response(historyMetadata(sourceMode==='mismatch'?'unmatched':linkedHistory));
+ }
  if(u.pathname.endsWith('/chart'))return response({version:'h1',series:[{trade_date:'2026-11-09',estimated_flow:10000,unit_nav:4.12345678,shares:100}]});
  throw Error('unexpected '+u.pathname);
 };
@@ -39,6 +48,7 @@ const settle=()=>new Promise(resolve=>setTimeout(resolve,0));
 const scrollCount=()=>[...nodes.values()].reduce((count,node)=>count+node.scrollCalls.length,0);
 function expectRevealed(id,count){const heading=nodes.get(id);assert.equal(heading.scrollCalls.length,count);assert.equal(heading.focusCalls.length,count);assert.equal(document.activeElement,heading);assert.equal(heading.attributes.tabindex,'-1');assert.deepEqual(heading.focusCalls.at(-1),{preventScroll:true});assert.deepEqual(heading.scrollCalls.at(-1),{block:'start',behavior:'auto'});}
 await settle();assert.equal(calls.filter(u=>u.pathname==='/api/v1/broad/meta').length,1,'visible default broad view loads once without a tab click');
+assert.equal(nodes.get('broad-asof').textContent,'全目录ETF份额截至 2026-11-06（2只有记录） · 全目录净值截至 2026-11-05（1只有记录） · 指数行情截至 2026-11-06','top-level freshness uses the immutable source dates even when the query target is later');
 assert.match(nodes.get('broad-heading').textContent,/沪深300.*整体资金/);
 assert.equal(renderings.at(-1).rows[0].value,null);assert.equal(renderings.at(-1).rows[1].value,10000);
 assert.equal(renderings.at(-1).options.overlay.unit,'点');assert.deepEqual(renderings.at(-1).options.tradingDates,['2026-11-06','2026-11-09']);
@@ -215,4 +225,24 @@ version='v2';nodes.get('broad-apply').click();await settle();assert.equal(nodes.
 assert.equal(nodes.get('broad-total').children[0].children[1].textContent,'—');assert.equal(nodes.get('broad-members-body').children.length,0);
 assert.equal(nodes.get('broad-total').attributes['aria-busy'],'false','an error is not left announced as still loading');
 assert.equal(ranks.hidden,true);
+// Source-date latency or failure must not prevent the core chart from loading.
+version='v1';sourceMode='deferred';nodes.get('refresh').click();await settle();
+assert.equal(sourcePending.length,1);
+assert.equal(nodes.get('broad-chart').children.length,1,'the chart loads while source-date metadata is pending');
+const freshnessCalls=calls.filter(url=>url.pathname==='/api/v1/history/meta').length;
+periods[0].click();await settle();nodes.get('broad-index').value='000001';nodes.get('broad-index').listeners.change();await settle();
+assert.equal(calls.filter(url=>url.pathname==='/api/v1/history/meta').length,freshnessCalls,'period and index changes reuse the current source-date request');
+assert.match(nodes.get('broad-asof').textContent,/指数行情截至 2026-11-05/);
+linkedHistory='h2';version='v2';nodes.get('refresh').click();await settle();assert.equal(sourcePending.length,2);
+sourcePending[1](response(historyMetadata('h2','2026-11-07')));await settle();
+assert.match(nodes.get('broad-asof').textContent,/全目录ETF份额截至 2026-11-07/);
+const currentSourceText=nodes.get('broad-asof').textContent;
+sourcePending[0](response(historyMetadata('h1','2026-11-08')));await settle();
+assert.equal(nodes.get('broad-asof').textContent,currentSourceText,'an older source metadata response cannot overwrite the current version');
+sourceMode='mismatch';nodes.get('refresh').click();await settle();
+assert.match(nodes.get('broad-asof').textContent,/全目录ETF份额截至 暂无 · 全目录净值截至 暂无/);
+assert.equal(nodes.get('broad-chart').children.length,1,'mismatched source metadata does not fail the verified main graph');
+sourceMode='failure';nodes.get('refresh').click();await settle();
+assert.match(nodes.get('broad-asof').textContent,/全目录ETF份额截至 暂无/);
+assert.equal(nodes.get('broad-chart').children.length,1,'unavailable source metadata leaves the main graph usable');
 console.log('PASS: estimated flow labels and coverage, pending/applied dates, index and refresh consistency, section jumps, first-column drilldown, scoped history, pagination, stale-response protection');

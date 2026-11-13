@@ -85,6 +85,8 @@ async function request(route,params){
   if(!response.ok||result.code!==0)throw Error(route+' failed '+response.status);
   return result.data;
 }
+const historyMeta=await request('history/meta',{});
+if(historyMeta.version!==hm.version||historyMeta.target_end!==end)throw Error('实际数据日期与历史快照版本不一致');
 const sizes={}, quotations={};
 async function pack(name,object){
   const raw=Buffer.from(JSON.stringify(object)),compressed=deflateRawSync(raw,{level:9});
@@ -155,7 +157,7 @@ for(const f of catalog.filter(f=>fundCodes.has(f.fund_code))){
   funds[f.fund_code]={name:f.fund_name,listed:f.listed_date,delisted:f.delisted_date,rows:rows.filter(r=>r[0]>=start&&r[0]<=end)};
 }
 await pack('funds',funds);await pack('off',off);await pack('indices',indices);await pack('calendar',cal);
-const meta={broad:{...bm,target_start:start,offline:true},history:{...hm,target_start:start,offline:true},market:mm,
+const meta={broad:{...bm,target_start:start,offline:true},history:{...hm,...(historyMeta.data_dates?{data_dates:historyMeta.data_dates}:{}),target_start:start,offline:true},market:mm,
   start,end,stocks:stocks.map(({stock_code,stock_name,stock_listed_date,industry_name})=>({stock_code,stock_name,stock_listed_date,industry_name,...quotations[stock_code]})),
   offNotes:offAll.off_exchange.notes,indices:bm.indexes.length,broadFunds:bm.total_funds,funds:Object.keys(funds).length,reports:off.length};
 delete meta.broad.mapping_checks;delete meta.broad.off_exchange;

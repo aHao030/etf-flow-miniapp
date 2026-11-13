@@ -3,7 +3,7 @@
     <view class="fund-name"><text class="title">{{name}}</text><text class="fund-code">{{code}}</text></view>
     <button class="fund-back" bindtap="goBack">‹ {{backLabel}}</button>
   </view>
-  <source-note target="{{maxDate}}" />
+  <source-note date="{{sourceDate}}" label="{{sourceLabel}}" />
   <view class="fund-filter" wx:if="{{minDate}}">
     
     <view class="row"><text class="fund-range">{{start || draftStart}} 至 {{end || draftEnd}}</text><button class="fund-back" bindtap="toggleDates">{{dateFiltersOpen ? '收起日期' : '更改日期'}}</button></view>

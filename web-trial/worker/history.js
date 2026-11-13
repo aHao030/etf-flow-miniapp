@@ -68,12 +68,36 @@ function hwatchItem(fund, rows, date) {
     share_change:estimated&&previous&&current[1]!==null?current[1]-previous[1]:null,
     estimated_flow:current?.[4]??null,flow_date:estimated?date:null,flow_quality:current?.[5]||'missing_current_shares'};
 }
+function historyDataDates(meta, catalog) {
+  const dates = {shares:{date:null,count:0},nav:{date:null,count:0},flow:{date:null,count:0}};
+  if (!hshape('catalog',catalog) || catalog.items.length!==meta.total_funds || !dateOK(meta.target_end)) return dates;
+  for (const fund of catalog.items) {
+    for (const field of Object.keys(dates)) {
+      const coverage = fund[field];
+      if (!object(coverage) || !Number.isSafeInteger(coverage.count) || coverage.count<=0 || !dateOK(coverage.end) || coverage.end<meta.target_start || coverage.end>meta.target_end) continue;
+      const latest = dates[field];
+      if (latest.date===null || coverage.end>latest.date) {
+        latest.date = coverage.end;
+        latest.count = 1;
+      } else if (coverage.end===latest.date) {
+        latest.count++;
+      }
+    }
+  }
+  return dates;
+}
 async function historyApi(request,env,url) {
   if(request.method!=='GET') return error(40500,'方法不支持',405);
   const manifest=await getJSON(env.BUCKET,'history-latest.json');
   if(!manifest||!VERSION.test(manifest.version||'')||!Array.isArray(manifest.files)) return error(50301,'历史数据正在准备',503);
   const read=k=>manifest.files.includes(k)?getJSON(env.BUCKET,hkey(manifest.version,k)):null;
-  if(url.pathname==='/api/v1/history/meta') { const meta=await read('meta'); return meta?ok(meta):error(50301,'历史数据未就绪',503); }
+  if(url.pathname==='/api/v1/history/meta') {
+    const meta=await read('meta');
+    if (!meta) return error(50301,'历史数据未就绪',503);
+    let catalog;
+    try { catalog=await read('catalog'); } catch { catalog=null; }
+    return ok({...meta,data_dates:historyDataDates(meta,catalog)});
+  }
   const pg=paginate(url); if(!pg) return error(40001,'分页参数非法');
   const catalog=await read('catalog'); if(!catalog?.items) return error(50301,'历史目录未就绪',503);
   if(url.pathname==='/api/v1/history/watchlist') {

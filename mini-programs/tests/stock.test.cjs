@@ -58,6 +58,7 @@ test('funds load before prices, unit and pagination reuse data, full list naviga
   const pricesPending=deferred();const {p,calls,charts,nav}=page((url,params)=>url.startsWith('market/stock/')?Promise.resolve(stock('600519',params.period)):pricesPending.promise);
   await p.chooseStock(codeEvent('600519'));assert.equal(calls[0].params.period,'20d');assert.equal(p.data.state,'ready');assert.equal(p.data.priceState,'loading');
   assert.equal(p.data.net,'20 auto');assert.equal(p.data.endAmount,'暂无估算');assert.equal(p.data.recentDate,'2026-11-09','real zero counts as a valid latest flow');
+  assert.equal(p.data.flowDate,'2026-11-09');assert.equal(p.data.asOf,'2026-11-10');
   assert.equal(p.data.top.length,10);assert.equal(p.data.top[0].code,'510021');assert.equal(p.data.fundCount,23);
   pricesPending.resolve(prices('600519',dates[0],dates[2]));await tick();assert.equal(p.data.priceState,'ready');
   assert.equal(charts.at(-1).rows[0].overlay,100);assert.equal(charts.at(-1).rows[1].overlay,null);assert.equal(charts.at(-1).rows[2].value,null);

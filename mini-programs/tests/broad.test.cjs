@@ -64,6 +64,7 @@ test('real trading days, true zero and unavailable totals survive into the chart
   assert.equal(page.data.chart.rows[1].value,0);assert.equal(page.data.chart.rows[3].value,null);
   assert.equal(page.data.chart.opts.currency,true);assert.equal(page.data.chart.opts.overlayUnit,'点');
   assert.equal(page.data.quote.change,'+20.00%');assert.equal(page.data.quote.span,'2026-11-03 至 2026-11-09');
+  assert.equal(page.data.indexDate,'2026-11-09');assert.equal(page.data.indexDateLabel,'本期指数行情截至');
   assert.equal(page.data.dailyRows[0].amount,'—');assert.equal(page.data.dailyRows[2].amount,'0 auto');
   page.changeDate(dateEvent('start','2026-11-06'));page.changeDate(dateEvent('end','2026-11-06'));
   assert.match(page.data.dateNotice,/日期待应用/);assert.equal(calls.length,2);
@@ -72,6 +73,15 @@ test('real trading days, true zero and unavailable totals survive into the chart
   assert.equal(page.data.quote.change,'');assert.match(page.data.quote.span,/仅有一个/);
   page.changeDate(dateEvent('start','2026-11-07'));page.changeDate(dateEvent('end','2026-11-08'));
   await page.applyDates();assert.equal(page.data.summary.complete,'无交易日');assert.equal(page.data.summary.amount,'—');
+  assert.equal(page.data.indexDate,'');
+});
+
+test('global index source date stays distinct from a historical filter and target date',async()=>{
+  const {page,server}=createPage();
+  server.handler=(route,params)=>route==='broad/meta'?{...meta,indexes:meta.indexes.map(item=>({...item,available_end:'2026-11-09'}))}:fixture(route,params);
+  await page.onLoad({start:'2026-11-06',end:'2026-11-06'});
+  assert.equal(page.data.indexDate,'2026-11-09');assert.equal(page.data.indexDateLabel,'指数行情截至');
+  assert.equal(page.data.end,'2026-11-06');
 });
 
 test('offline presets respect the package boundary and never repeat the same range',async()=>{

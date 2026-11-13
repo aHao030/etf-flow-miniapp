@@ -90,7 +90,7 @@ Page({
   data:{
     view:'search', query:'', searchState:'idle', searchMessage:'', searchRows:[], searchPage:1, searchMore:false,
     watch:[], sampleStocks:[], watchError:'', code:'', name:'', watched:false, period:'20d', periods:PERIODS, unit:'auto', units:UNITS,
-    state:'idle', error:'', chart:null, priceState:'idle', priceNote:'', dailyOpen:false, fullOpen:false,
+    state:'idle', error:'', chart:null, flowDate:'',priceState:'idle', priceNote:'', dailyOpen:false, fullOpen:false,
     daily:{items:[],current:1,pages:1}, funds:{items:[],current:1,pages:1}, top:[],
     directions:fundDirections, fundDirection:'all', fundQuery:'',
     lifeOpen:false, lifeState:'idle', lifeNote:'', lifeChart:null, lifeFrom:'', lifeTo:'', lifeDailyOpen:false,
@@ -172,7 +172,7 @@ Page({
     };
     const priorLife=this._restoreLife;
     this._stock=null;this._market=null;this._rows=[];this._quotes=null;this._funds=[];this._life=null;
-    this.setData({view:'detail',code,name:code,state:'loading',error:'',chart:null,chartDay:null,lifeDay:null,priceState:'idle',priceNote:'',watchError:'',
+    this.setData({view:'detail',code,name:code,state:'loading',error:'',chart:null,flowDate:'',chartDay:null,lifeDay:null,priceState:'idle',priceNote:'',watchError:'',
       dailyOpen:false,fullOpen:sameStock && this.data.fullOpen,fundQuery:sameStock?this.data.fundQuery:'',
       fundDirection:sameStock?this.data.fundDirection:'all',lifeOpen:false,lifeState:'idle',lifeDailyOpen:false,lifeChart:null,lifeNote:'',
       daily:{items:[],current:1,pages:1},funds:{items:[],current:fundPage,pages:1},top:[]});
@@ -218,7 +218,7 @@ Page({
     const valid=this._funds.filter(r=>Number.isFinite(r.flow));const top=valid.slice(0,10);
     const max=top.length?Math.max(1,Math.abs(top[0].flow)):1;
     const endValue=last?.date===m.window_end?last.value:null;
-    this.setData({net:money(m.observed_net_flow,unit),netClass:tone(m.observed_net_flow),
+    this.setData({net:money(m.observed_net_flow,unit),netClass:tone(m.observed_net_flow),flowDate:recent||'',
       endAmount:Number.isFinite(endValue)?money(endValue,unit):'暂无估算',endTone:tone(endValue),endDate:m.window_end,
       recentDate:!Number.isFinite(endValue)?recent:'',
       windowText:m.window_start+(m.start_exclusive?'（不含）':'')+' 至 '+m.window_end,

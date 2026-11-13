@@ -30,7 +30,7 @@
     <view class="stock-summary-head"><view><view class="title">{{name}}</view><view class="muted">{{code}}</view></view>
       <button class="stock-outline" wx:if="{{state === 'ready'}}" bindtap="toggleWatch">{{watched ? '移出自选' : '加入自选'}}</button>
     </view>
-    <source-note />
+    <source-note date="{{flowDate}}" label="本期资金估算截至" />
     <view wx:if="{{watchError}}" class="stock-message">{{watchError}}</view>
     <view wx:if="{{state === 'loading'}}" class="panel muted">正在读取个股数据…</view>
     <view wx:if="{{state === 'error'}}" class="panel stack"><text>{{error}}</text><button class="button" bindtap="retryStock">重新读取</button></view>
@@ -73,7 +73,7 @@
       </view>
       <view class="panel stack">
         <view class="section-title">上市以来股价</view>
-        <view class="muted" wx:if="{{listed}}">已核验上市日 {{listed}} · 目标日 {{asOf}}</view>
+        <view class="muted" wx:if="{{listed}}">已核验上市日 {{listed}} · 可查询至 {{asOf}}</view>
         <view class="muted" wx:else>上市日待核验，可查询 1990 年起的实际价格记录。</view>
         <button wx:if="{{!lifeOpen}}" class="stock-outline" bindtap="openLife">查看上市以来收盘价</button>
         <block wx:if="{{lifeOpen}}"><view class="stock-dates"><picker mode="date" value="{{lifeFrom}}" start="{{lifeMin}}" end="{{asOf}}" data-field="lifeFrom" bindchange="setLifeDate"><view class="stock-date"><text class="muted">开始日期</text><text>{{lifeFrom}}</text></view></picker><picker mode="date" value="{{lifeTo}}" start="{{lifeMin}}" end="{{asOf}}" data-field="lifeTo" bindchange="setLifeDate"><view class="stock-date"><text class="muted">结束日期</text><text>{{lifeTo}}</text></view></picker></view>

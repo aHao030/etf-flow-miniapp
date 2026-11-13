@@ -1,8 +1,9 @@
 import {renderTimeChart,exactAmount} from './charts.mjs';
-import {money, latestOnly, onMoneyUnitChange, resolveMoneyUnit, revealSection} from './logic.mjs';
+import {money, latestOnly, onMoneyUnitChange, resolveMoneyUnit, revealSection, sourceDataDates, sourceDateLabel} from './logic.mjs';
 const $=id=>document.getElementById(id);
 const guard=latestOnly(), chartGuard=latestOnly(),offGuard=latestOnly();
 let meta=null, indexCode='000300', selected=null, period=3, metric='flow', data=null, offPage=1, customRange=null;
+let sourceMeta=null;
 let lastChart=null, chartCleanup=null, loading=false, dailyPage=1, memberPage=1;
 const memberPageSize=20;
 let rangeMessage='', rangeRejected=false;
@@ -190,9 +191,15 @@ function summary(){
     ['有资金估算的交易日',stats.observed.length+' / '+data.series.length+' 日',null],
     endMemberCoverage(latest),
   ]){const item=el('div',null,'history-stat');item.append(el('span',label),el('strong',value,tone(amount)));box.append(item);}
-  $('broad-asof').textContent='数据目标日 '+meta.target_end;
+  renderSourceDates();
   setRangeMessage('');
   $('broad-notes').textContent=[...(meta.notes||[]),'资金口径为跟踪指数的 ETF 净申赎，无法识别持有人，也不代表成分股实际买卖金额。份额变化 × 前日净值为净申赎估算；缺失不计为零，完整合计需所有应有成员齐全。指数早期数据可早于 ETF 存续期。'].join(' ');
+}
+function renderSourceDates() {
+  const dates = sourceDataDates(sourceMeta, meta?.history_version);
+  const descriptor = meta?.indexes.find(item => item.code === (indexCode === 'all' ? '000001' : indexCode));
+  const indexDay = validDate(descriptor?.available_end) && descriptor.available_end <= meta.target_end ? descriptor.available_end : '暂无';
+  $('broad-asof').textContent = '全目录ETF份额截至 ' + sourceDateLabel(dates.shares) + ' · 全目录净值截至 ' + sourceDateLabel(dates.nav) + ' · ' + (indexCode === 'all' ? '参考指数截至 ' : '指数行情截至 ') + indexDay;
 }
 function renderDaily(){
   const body=$('broad-daily-body');body.replaceChildren();
@@ -235,19 +242,27 @@ async function loadOffExchange(page){
 }
 async function load(){
   const datesAtRequest=visibleDates(),sequence=guard.next();
-  loading=true;chartGuard.next();offGuard.next();data=null;clearChart();renderDaily();renderList();renderTotal('正在读取指数与 ETF 对应关系…');$('broad-summary').replaceChildren();setRangeMessage('正在读取指数与 ETF 对应关系…');
+  loading=true;sourceMeta=null;$('broad-asof').textContent='正在读取来源数据日期…';chartGuard.next();offGuard.next();data=null;clearChart();renderDaily();renderList();renderTotal('正在读取指数与 ETF 对应关系…');$('broad-summary').replaceChildren();setRangeMessage('正在读取指数与 ETF 对应关系…');
   try{
     const result=await api('broad/meta');if(!guard.current(sequence))return;
     if(!Array.isArray(result.indexes)||!result.indexes.length)throw Error('尚无可用指数数据');
     meta=result;if(indexCode!=='all'&&!meta.indexes.some(x=>x.code===indexCode))indexCode=meta.indexes[0].code;
+    renderSourceDates();
+    // Source freshness is optional. It must not delay the selected chart or let
+    // a response from the prior immutable version replace this view's dates.
+    api('history/meta').catch(()=>null).then(history=>{
+      if(!guard.current(sequence)||meta!==result)return;
+      sourceMeta=history;renderSourceDates();
+    });
     renderFilters();syncDates({keepInput:!sameRange(visibleDates(),datesAtRequest)});
     if(!allowedRange(appliedDates())){rejectRange();return;}
     await loadIndex();
-  }catch(error){if(!guard.current(sequence))return;meta=null;data=null;$('broad-summary').replaceChildren();renderList('基金明细暂不可用，请刷新重试。');renderTotal(error.message+'，请刷新重试。',false);clearChart();setRangeMessage(error.message);$('broad-chart-state').textContent='旧图已隐藏，请点击顶部刷新数据重试。';}
+  }catch(error){if(!guard.current(sequence))return;meta=null;sourceMeta=null;$('broad-asof').textContent='来源数据日期暂未取得';data=null;$('broad-summary').replaceChildren();renderList('基金明细暂不可用，请刷新重试。');renderTotal(error.message+'，请刷新重试。',false);clearChart();setRangeMessage(error.message);$('broad-chart-state').textContent='旧图已隐藏，请点击顶部刷新数据重试。';}
   finally{if(guard.current(sequence))loading=false;}
 }
 async function loadIndex(){
   if(!meta)return;const sequence=chartGuard.next(),code=indexCode,start=startDate(),end=endDate();
+  renderSourceDates();
   setRangeMessage('正在读取 '+start+' 至 '+end+' 的期间资金…');
   $('broad-index-quote').replaceChildren();$('broad-legend').textContent='';
   $('broad-heading').textContent=selectedIndex().name+' · 正在读取期间资金';$('broad-subtitle').textContent='所选范围 '+start+' 至 '+end;

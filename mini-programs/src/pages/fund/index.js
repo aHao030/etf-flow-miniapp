@@ -83,7 +83,7 @@ async function calendarFor(meta,start,end) {
 
 function emptyRange() {
   return {
-    ready: false, loading: false, error: '', retryable: false, needsNewVersion:false, start: '', end: '',
+    ready: false, loading: false, error: '', retryable: false, needsNewVersion:false, start: '', end: '',sourceDate:'',sourceLabel:'本期估算净申赎截至',
     chart: null, chartDay:null, chartNotice: '', chartRetry: '', summaryValue: '', summaryLabel: '', coverage: '',
     detailsOpen: false, detailLoading: false, detailError: '', detailRows: [],
     total: 0, detailPage: 1, pageCount: 1
@@ -265,6 +265,7 @@ Page({
     });
     const observed = rows.filter(row => Number.isFinite(row.value));
     const latest = observed[observed.length - 1];
+    this.setData({sourceDate:latest?.date||'',sourceLabel:this.data.metric==='flow'?'本期估算净申赎截至':'本期'+metric.label+'截至'});
     const isFlow = metric.currency;
     const coverage = '所选 ' + rows.length + ' 个开市日，有值 ' + observed.length + ' 日' +
       (latest ? '。最近有值日 ' + latest.date : '') + '。';

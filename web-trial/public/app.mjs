@@ -1,10 +1,10 @@
-import { money, signClass, latestOnly, formatWeight, weightLabel, selectSeries, getMoneyUnit, setMoneyUnit, onMoneyUnitChange, revealSection } from './logic.mjs';
+import { money, signClass, latestOnly, formatWeight, weightLabel, selectSeries, getMoneyUnit, setMoneyUnit, onMoneyUnitChange, revealSection, sourceDataDates, sourceDateLabel } from './logic.mjs';
 import { renderTimeChart, renderContributions, renderCoverage } from './charts.mjs';
 import { tradingDates, resetTradingCalendar } from './calendar.mjs';
 import {beginPriceHistoryStock, setPriceHistoryStock, refreshPriceHistory} from './price-history.mjs';
 const $ = id => document.getElementById(id);
 const state = { stock: '', stockName: '', stockPeriod: '20d', rankPeriod: '1d', direction: 'in', industry: '', rankPage: 1, rankMore: false, searchPage: 1, searchMore: false, query: '' };
-const rankGuard = latestOnly(), searchGuard = latestOnly(), stockGuard = latestOnly(), etfGuard = latestOnly();
+const rankGuard = latestOnly(), searchGuard = latestOnly(), stockGuard = latestOnly(), etfGuard = latestOnly(), metaGuard = latestOnly();
 const statusNames = { complete: '完整', partial: '已披露部分持仓', disclosed_partial:'已披露贡献小计', no_ashare_holdings:'本期未列 A 股持仓', unavailable:'待取得有效披露', missing: '缺失', pending: '待纳入' };
 function element(tag, text, cls) {
   const node = document.createElement(tag);
@@ -18,10 +18,10 @@ function message(container, text, retry) {
   container.replaceChildren(element('span', text));
   if (retry) { const button = element('button', '重试'); button.type = 'button'; button.addEventListener('click', retry); container.append(' ', button); }
 }
-async function api(path, params = {}) {
+async function api(path, params = {}, dataset = 'market') {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) if (value !== '' && value != null) query.set(key, String(value));
-  const response = await fetch('/api/v1/market' + path + (query.size ? '?' + query : ''), { headers: { Accept: 'application/json' } });
+  const response = await fetch('/api/v1/' + dataset + path + (query.size ? '?' + query : ''), { headers: { Accept: 'application/json' } });
   let body; try { body = await response.json(); } catch { throw new Error('服务响应无法读取'); }
   if (!response.ok || body.code !== 0) throw new Error(body.message || '请求失败');
   return body.data;
@@ -127,7 +127,7 @@ function renderStock(d) {
   setPriceHistoryStock(d);
   const movement = d.movement || {}, coverage = d.coverage || {}, contributions = Array.isArray(d.etf_contributions) ? d.etf_contributions : [];
   state.stockName = d.stock_name || d.stock_code; $('stock-heading').textContent = state.stockName + '  ' + d.stock_code;
-  $('stock-subtitle').textContent = (d.industry_name || '未分类') + ' · 数据交易日 ' + (d.trade_date || '—');
+  $('stock-subtitle').textContent = (d.industry_name || '未分类') + ' · 可查询至 ' + (d.trade_date || '—');
   $('stock-status').textContent = stockStatus(d); $('stock-status').hidden = !stockStatus(d);
   $('stock-status').classList.toggle('compact-notice', !!stockStatus(d));
   $('stock-content').hidden = false; $('watch-toggle').hidden = false; renderWatch();
@@ -249,19 +249,23 @@ async function loadRank() {
   }
 }
 async function loadMeta() {
+  const sequence = metaGuard.next();
+  $('trade-date').textContent = '正在读取…';
+  $('refresh-time').textContent = '正在读取…';
+  $('refresh-time').dateTime = '';
   try {
     const data = await api('/meta'), coverage = data.coverage || {};
-    $('trade-date').textContent = data.latest_date || '—';
-    const generated = data.generated_at ? new Date(data.generated_at) : null;
+    if (!metaGuard.current(sequence)) return;
+    const history = data.history_version ? await api('/meta', {}, 'history').catch(() => null) : null;
+    if (!metaGuard.current(sequence)) return;
+    const dates = sourceDataDates(history, data.history_version);
+    $('trade-date').textContent = sourceDateLabel(dates.shares);
     const stamp = $('refresh-time');
-    stamp.dateTime = generated && Number.isFinite(generated.getTime()) ? generated.toISOString() : '';
-    stamp.textContent = stamp.dateTime ? new Intl.DateTimeFormat('zh-CN', {
-      timeZone: 'Asia/Shanghai', year:'numeric', month:'2-digit', day:'2-digit',
-      hour:'2-digit', minute:'2-digit', hourCycle:'h23'
-    }).format(generated) : '待确认';
+    stamp.dateTime = dates.nav.date || '';
+    stamp.textContent = sourceDateLabel(dates.nav);
     $('coverage').textContent = '全市场目录 ' + (coverage.tracked_etfs ?? '—') + ' 只 ETF，已有 A 股披露持仓 ' + (coverage.active_etfs ?? '—') + ' 只；其余 ' + (coverage.pending_etfs ?? '—') + ' 只的状态可在下方逐只查看。披露持仓可能只是部分股票，目录覆盖不等于资金计算完整。';
     $('disclosure').textContent = (data.disclosure && data.disclosure.short) || '估算值非真实买卖资金，不构成投资建议。';
-  } catch (err) { $('trade-date').textContent = '加载失败'; $('refresh-time').textContent = '待确认'; $('refresh-time').dateTime = ''; $('coverage').textContent = '数据范围暂不可用，请刷新重试。'; }
+  } catch (err) { if (!metaGuard.current(sequence)) return; $('trade-date').textContent = '加载失败'; $('refresh-time').textContent = '暂无'; $('refresh-time').dateTime = ''; $('coverage').textContent = '数据范围暂不可用，请刷新重试。'; }
 }
 async function loadIndustries() {
   try { const d = await api('/industries'); const select = $('industry');

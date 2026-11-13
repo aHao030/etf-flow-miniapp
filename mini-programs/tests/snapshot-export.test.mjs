@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import {exportSnapshot} from '../scripts/export-snapshot.mjs';
-import {BLOCKS,readSelectedSnapshot,publishSnapshot,restoreSnapshot,sha256} from '../scripts/snapshot-store.mjs';
+import {BLOCKS,readSelectedSnapshot,publishSnapshot,restoreSnapshot,sha256,unpackModule} from '../scripts/snapshot-store.mjs';
 
 function temp(t){
   const base=fs.realpathSync(os.tmpdir());
@@ -27,7 +27,8 @@ function fixture(t){
     }
     write(path.join(d,'manifest.json'),{version:versions[n],target_start:start,target_end:target,files:Object.keys(docs),hashes});
   }
-  const meta=n=>({version:versions[n],target_start:start,target_end:target,history_version:versions.history});
+  const meta=n=>({version:versions[n],target_start:start,target_end:target,history_version:versions.history,
+    ...(n==='history'?{data_dates:{shares:{date:previous,count:1},nav:{date:target,count:2},flow:{date:previous,count:1}}}:{})});
   archive('market',{meta:meta('market'),catalog:{items:stocks}});
   archive('history',{meta:meta('history'),catalog:{items:[]}});
   archive('broad',{meta:{...meta('broad'),indexes:[],total_funds:0},calendar:{dates:[start,previous,target]},
@@ -42,6 +43,9 @@ export default {async fetch(req,env){
  appendFileSync(${JSON.stringify(callsFile)},'x');
  const url=new URL(req.url),[key,code]=url.pathname.split('/').slice(-3).filter((_,i)=>i!==1);
  let data={movement:{trading_dates:[]},period:url.searchParams.get('period'),series:[],etf_contributions:[]};
+ if(url.pathname==='/api/v1/history/meta'){
+ const obj=await env.BUCKET.get('history/'+versions.history+'/meta.json');data=JSON.parse(await obj.text());
+ }
  if(key==='prices'){
  const obj=await env.BUCKET.get('prices/eastmoney/v1/'+code+'.json'),raw=JSON.parse(await obj.text());
  data={provider:'eastmoney',market_version:versions.market,history_version:versions.history,calendar_version:versions.broad,
@@ -56,6 +60,9 @@ test('writes one immutable release, verifies seven files and skips a repeat',asy
   const a=await exportSnapshot(f),v=readSelectedSnapshot(f.root);
   assert.equal(a.status,'published');assert.equal(a.id,v.id);assert.deepEqual(Object.keys(v.files),BLOCKS);
   assert.equal(v.targetEnd,target);assert.equal(v.summary.quotations['600519'].price_pending,false);
+  const actual=unpackModule(f.root,path.join(v.dir,'meta.js'),false).history.data_dates;
+  assert.equal(actual.shares.date,previous);assert.equal(actual.flow.date,previous);
+  assert.equal(actual.nav.date,target);assert.equal(actual.shares.count,1);
   const ptr=path.join(f.root,'.snapshot-store/latest.json'),mtime=fs.statSync(ptr).mtimeMs;
   assert.equal((await exportSnapshot(f)).status,'unchanged');assert.equal(fs.statSync(ptr).mtimeMs,mtime);
   const file=f.pricePath('300750'),p=read(file);p.unused_input_field='irrelevant to export';write(file,p);

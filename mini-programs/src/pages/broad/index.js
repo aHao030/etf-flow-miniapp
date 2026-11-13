@@ -125,7 +125,7 @@ function offList(off) {
 Page({
   data: {
     periods:PERIODS,sections:SECTIONS,period:'3',section:'chart',unit:'auto',unitIndex:0,unitNames:['自动单位','万元','亿元'],
-    indexNames:[],indexCodes:[],indexChoice:0,code:'000300',indexName:'沪深300',start:'',end:'',minDate:'',maxDate:'',
+    indexNames:[],indexCodes:[],indexChoice:0,code:'000300',indexName:'沪深300',indexDate:'',indexDateLabel:'指数行情截至',start:'',end:'',minDate:'',maxDate:'',
     dateFiltersOpen:false,coverageOpen:false,dateNotice:'',query:'',busy:true,catalogBusy:true,error:'',ready:false,summary:null,chart:null,quote:null,
     directions:fundDirections,memberDirection:'all',memberRows:[],memberPage:1,memberPages:1,memberTotal:0,dailyRows:[],dailyPage:1,dailyPages:1,dailyTotal:0,
     offRows:[],offPage:1,offPages:1,offTotal:0,offBusy:false,offError:''
@@ -154,7 +154,7 @@ Page({
   onUnload() {this._request++;this._offRequest++;},
   clearResult() {
     this._result=null;this._offRequest++;
-    this.setData({ready:false,summary:null,quote:null,chart:null,chartDay:null,memberRows:[],dailyRows:[],offRows:[],offBusy:false,offError:'',error:'',dateNotice:''});
+    this.setData({ready:false,summary:null,quote:null,chart:null,chartDay:null,indexDate:'',memberRows:[],dailyRows:[],offRows:[],offBusy:false,offError:'',error:'',dateNotice:''});
   },
   async refresh(options={}) {
     const returnPage=options.foreground===true ? this.data.memberPage : 1;
@@ -205,7 +205,12 @@ Page({
       if(ticket!==this._request)return;
       checkResult(result,meta,code,start,end);
       this._result=result;
-      this.setData({busy:false,ready:true,quote:benchmark(result),memberPage,dailyPage:1});
+      const descriptor=meta.indexes.find(item=>item.code===(code==='all'?'000001':code));
+      const globalDate=validDate(descriptor?.available_end)&&descriptor.available_end<=meta.target_end?descriptor.available_end:'';
+      const observed=result.series.filter(row=>finite(row.index_close)&&row.index_close>0);
+      this.setData({busy:false,ready:true,quote:benchmark(result),memberPage,dailyPage:1,
+        indexDate:globalDate||observed[observed.length-1]?.trade_date||'',
+        indexDateLabel:globalDate?'指数行情截至':'本期指数行情截至'});
       this.renderAmounts();
       this.updateDateNotice();
       this._offPageSize=PAGE_SIZE;this._offWanted=1;

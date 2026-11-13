@@ -24,7 +24,8 @@ function setup(platform='wechat',options={}){
   const updates=load('lib/updates.js',read('lib/updates.js'));
   files['./lib/updates']=updates;files['../../lib/updates']=updates;
   files['../../lib/config']=options.config||{appVersion:'1.1.0',buildId:'cafe00001234'};
-  const info=options.info||{mode:'snapshot',target_end:'2026-11-10',paired:false};
+  const info=options.info||{mode:'snapshot',target_end:'2026-11-10',paired:false,
+    data_dates:{shares:{date:'2026-11-09',count:17},nav:{date:'2026-11-10',count:1},flow:{date:'2026-11-06',count:4}}};
   files['../../lib/data']={sourceInfo:()=>info,get:(...args)=>{counts.requests++;return options.get(...args);},pair:async()=>{info.paired=true;}};
   load('app.js',read('app.js'),{App:obj=>app=obj});load('pages/about/index.js',read('pages/about/index.js'),{Page:obj=>page=obj});
   const about={...page,data:structuredClone(page.data),setData(value){Object.assign(this.data,value);}};
@@ -43,7 +44,8 @@ for(const platform of ['wechat','xiaohongshu']){
     dialogs[0].success({confirm:false,cancel:true});await tick();events.ready();app.onHide();app.onShow();
     assert.equal(dialogs.length,1,'defer does not nag on each tab/foreground');assert.equal(counts.applied,0);
     await about.onShow();assert.equal(about.data.update.canRestart,true);assert.equal(about.data.appVersion,'1.1.0');
-    assert.equal(about.data.buildId,'cafe00001234');assert.equal(about.data.dataDate,'2026-11-10');assert.equal(counts.requests,0);
+    assert.equal(about.data.buildId,'cafe00001234');assert.equal(about.data.dataDate,'2026-11-09');assert.equal(counts.requests,0);
+    assert.equal(about.data.navDate,'2026-11-10');assert.equal(about.data.flowDate,'2026-11-06');assert.equal(about.data.dateCounts.shares,17);
     about.applyReady();about.applyReady();assert.equal(counts.applied,1);assert.equal(about.data.update.status,'applying');
   });
 }
@@ -65,14 +67,27 @@ test('unavailable methods and failed apply provide a recovery instruction and do
   assert.equal(counts.applied,0);await about.onShow();about.applyReady();assert.equal(about.data.update.status,'applyFailed');
   assert.match(about.data.update.message,/重新打开/);about.applyReady();assert.equal(counts.applied,1);
 });
-test('online/local market dates come from verified metadata, ignore stale reads and remain independent of the package version',async()=>{
+test('online actual dates come from history metadata, ignore stale reads and remain independent of the package version',async()=>{
   const pending=[];const {app,about,counts}=setup('wechat',{info:{mode:'live',paired:false},
-    get:route=>{assert.equal(route,'market/meta');return new Promise(resolve=>pending.push(resolve));}});
+    get:route=>{assert.equal(route,'history/meta');return new Promise(resolve=>pending.push(resolve));}});
   app.onLaunch();await about.onShow();assert.equal(about.data.dataDate,'连接后显示');assert.equal(counts.requests,0);
   about.inputCode({detail:{value:'12345678'}});const connect=about.connect();await tick();assert.equal(counts.requests,1);
-  about.onHide();const fresh=about.onShow();pending[1]({target_end:'2026-11-11'});await fresh;
-  pending[0]({target_end:'2026-11-01'});await connect;assert.equal(about.data.dataDate,'2026-11-11');assert.equal(about.data.appVersion,'1.1.0');
-  const invalid=about.refreshSource();pending[2]({latest_date:'2026-02-31'});await invalid;
-  assert.equal(about.data.dateRetry,true);assert.equal(about.data.dataDate,'暂未取得');
-  const retry=about.refreshSource();pending[3]({latest_date:'2026-11-12'});await retry;assert.equal(about.data.dataDate,'2026-11-12');
+  about.onHide();const fresh=about.onShow();pending[1]({target_end:'2026-11-13',data_dates:{shares:{date:'2026-11-12',count:1720}}});await fresh;
+  pending[0]({target_end:'2026-11-13',data_dates:{shares:{date:'2026-11-11',count:17}}});await connect;
+  assert.equal(about.data.dataDate,'2026-11-12');assert.equal(about.data.appVersion,'1.1.0');
+  const invalid=about.refreshSource();pending[2]({target_end:'2026-11-13',data_dates:{shares:{date:'2026-02-31',count:1}}});await invalid;
+  assert.equal(about.data.dateRetry,true);assert.equal(about.data.dataDate,'尚未取得');assert.equal(Object.keys(about.data.dateCounts).length,0);
+  const retry=about.refreshSource();pending[3]({target_end:'2026-11-13',data_dates:{shares:{date:'2026-11-12',count:1720}}});await retry;
+  assert.equal(about.data.dataDate,'2026-11-12');assert.equal(about.data.dateCounts.shares,1720);
+});
+
+test('older offline metadata and invalid source dates never fall back to target or generation dates',async()=>{
+  for(const data_dates of [undefined,{shares:{date:'2026-11-14',count:1}},{shares:{date:'2026-11-12',count:0}},
+    {shares:{date:'2026-11-12',count:'17'}},{shares:{date:'2026-11-12'}}]){
+    const {about,counts}=setup('wechat',{info:{mode:'snapshot',target_end:'2026-11-13',latest_date:'2026-11-13',
+      generated_at:'2026-11-13T16:00:00Z',data_dates}});
+    await about.onShow();assert.equal(about.data.dataDate,'尚未取得');assert.equal(counts.requests,0);
+  }
+  const component=read('components/source-note/index.wxml');
+  assert(!component.includes('target_end'));assert(!component.includes('target}}'));
 });

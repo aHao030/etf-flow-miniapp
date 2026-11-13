@@ -1,6 +1,6 @@
 <view class="page broad-page">
   <view class="b-head">
-    <view><view class="title">宽基指数观察</view><source-note target="{{maxDate}}" /></view>
+    <view><view class="title">宽基指数观察</view><source-note date="{{indexDate}}" label="{{indexDateLabel}}" /></view>
     <button class="b-quiet" size="mini" bindtap="refresh" disabled="{{busy}}">刷新</button>
   </view>
   <view wx:if="{{indexNames.length}}" class="b-filters">

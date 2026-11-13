@@ -1,2 +1,2 @@
 const {sourceInfo}=require('../../lib/data');
-Component({properties:{target:String},data:{info:sourceInfo()}});
+Component({properties:{date:String,label:String},data:{info:sourceInfo()}});

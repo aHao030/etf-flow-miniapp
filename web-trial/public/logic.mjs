@@ -30,6 +30,34 @@ export function latestOnly() {
   let sequence = 0;
   return { next: () => ++sequence, current: id => id === sequence };
 }
+function sourceDateOK(value, end) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(value + 'T00:00:00Z');
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0,10) === value && value <= end;
+}
+// These dates belong to observed records. The query target and batch time never
+// supply a missing source date, including when an older snapshot is loaded.
+export function sourceDataDates(meta, expectedVersion) {
+  const result = {shares:{date:null,count:0},nav:{date:null,count:0},flow:{date:null,count:0}};
+  if (!expectedVersion || meta?.version !== expectedVersion || !sourceDateOK(meta.target_end, '9999-12-31')) return result;
+  if (meta.data_dates && typeof meta.data_dates === 'object') {
+    for (const field of Object.keys(result)) {
+      const item = meta.data_dates[field];
+      if (sourceDateOK(item?.date, meta.target_end) && Number.isSafeInteger(item.count) && item.count > 0) {
+        result[field] = {date:item.date,count:item.count};
+      }
+    }
+    return result;
+  }
+  const observed = [...Object.values(meta.source_days || {}), ...Object.values(meta.market_days || {})]
+    .map(item => item?.end).filter(day => sourceDateOK(day, meta.target_end)).sort();
+  if (observed.length) result.shares = {date:observed.at(-1),count:null};
+  return result;
+}
+export function sourceDateLabel(item) {
+  if (!item?.date) return '暂无';
+  return item.date + (Number.isSafeInteger(item.count) && item.count > 0 ? '（' + item.count.toLocaleString('zh-CN') + '只有记录）' : '');
+}
 export function formatWeight(value) {
   return value == null || !Number.isFinite(Number(value)) ? '—' : (Number(value) * 100).toFixed(2) + '%';
 }

@@ -8,7 +8,8 @@ function sourceInfo(){
   const m=offline.meta, snapshot=config.mode==='snapshot';
   return {mode:config.mode,label:snapshot?'离线快照':config.mode==='local'?'本机完整库':'在线完整库',
     target_start:snapshot?m.start:'',target_end:snapshot?m.end:'',stocks:snapshot?m.stocks:[],
-    indices:snapshot?m.indices:null,broadFunds:snapshot?m.broadFunds:null,reports:snapshot?m.reports:null,paired:!!session};
+    indices:snapshot?m.indices:null,broadFunds:snapshot?m.broadFunds:null,reports:snapshot?m.reports:null,
+    data_dates:snapshot?m.history?.data_dates:null,paired:!!session};
 }
 async function pair(code){
   if(config.mode!=='live'||!/^\d{8}$/.test(code))throw Error('请输入本机显示的 8 位连接码。');

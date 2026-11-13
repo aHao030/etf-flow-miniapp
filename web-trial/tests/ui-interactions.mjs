@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict';
-import { money, signClass, latestOnly, formatWeight, weightLabel } from '../public/logic.mjs';
+import { money, signClass, latestOnly, formatWeight, weightLabel, sourceDataDates, sourceDateLabel } from '../public/logic.mjs';
 assert.equal(money(null), '—'); assert.equal(money(undefined), '—'); assert.equal(money(0), '0.00 万元');
 assert.equal(money(-12000), '-1.20 万元'); assert.equal(signClass(-1), 'negative'); assert.equal(formatWeight(null), '—');
 assert.equal(weightLabel('index_csindex(000300)'), '指数权重'); assert.equal(weightLabel('report(2026Q2)'), '定期披露持仓');
 const guard = latestOnly(), old = guard.next(), fresh = guard.next(); assert(!guard.current(old)); assert(guard.current(fresh));
+const sourceMeta = {version:'h1',target_end:'2026-11-13',generated_at:'2026-11-13T10:00:00Z',data_dates:{shares:{date:'2026-11-12',count:1720},nav:{date:'2026-11-11',count:1694},flow:{date:null,count:0}}};
+assert.equal(sourceDateLabel(sourceDataDates(sourceMeta,'h1').shares),'2026-11-12（1,720只有记录）');
+assert.equal(sourceDataDates(sourceMeta,'different').shares.date,null,'dates from another history version remain unknown');
+assert.equal(sourceDataDates({...sourceMeta,data_dates:{shares:{date:'2026-11-14',count:1}}},'h1').shares.date,null,'future dates never become published source dates');
+assert.equal(sourceDataDates({...sourceMeta,data_dates:{nav:{date:'2026-02-31',count:1}}},'h1').nav.date,null,'invalid calendar dates remain unknown');
+const legacyDates=sourceDataDates({version:'old',target_end:'2026-11-13',generated_at:'2026-11-13T10:00:00Z',source_days:{sse:{end:'2026-11-12'},szse:{end:'2026-11-11'}}},'old');
+assert.deepEqual(legacyDates.shares,{date:'2026-11-12',count:null});
+assert.equal(legacyDates.nav.date,null,'older metadata never substitutes the query target or generated time');
+assert.equal(sourceDateLabel(legacyDates.nav),'暂无');
 class Node {
   constructor(tag = 'div') { this.tag = tag; this.children = []; this.listeners = {}; this.dataset = {}; this.hidden = false; this.disabled = false; this.value = ''; this.textContent = ''; this.attributes = {}; this.style = {}; this.clientWidth = 800; this.className = ''; this.classList = { toggle: () => {} }; }
   append(...nodes) { this.children.push(...nodes); }
@@ -28,7 +37,8 @@ const calls = [];
 const stock = period => ({stock_code:'300750',stock_name:'<img src=x onerror=alert(1)>',industry_name:'电子',trade_date:'2026-10-29',data_status:'ok',movement:{period,net_flow:123,inflow:123,outflow:0,valid_days:1,window_days:1,complete:true},coverage:{tracked_etfs:1,pending_etfs:0},quality:{},series:[{trade_date:'2026-10-29',flow:123}],etf_contributions:[{etf_code:'510300',etf_name:'ETF',flow:123,weight:0.1,weight_source:'index',status:'complete',valid_days:1}]});
 globalThis.fetch = async url => { calls.push(String(url)); const u = new URL(String(url), 'http://localhost'); let data;
   if (u.pathname.endsWith('/broad/calendar')) data={start:'2021-01-01',end:'2026-12-31',dates:Array.from({length:2191},(_,i)=>new Date(Date.UTC(2021,0,1)+i*86400000)).filter(d=>![0,6].includes(d.getUTCDay())).map(d=>d.toISOString().slice(0,10))};
-  else if (u.pathname.endsWith('/meta')) data={latest_date:'2026-10-29',coverage:{tracked_etfs:18,active_etfs:13,pending_etfs:5},disclosure:{short:'估算'}};
+  else if (u.pathname==='/api/v1/history/meta') data=sourceMeta;
+  else if (u.pathname.endsWith('/meta')) data={latest_date:'2026-11-13',history_version:'h1',coverage:{tracked_etfs:18,active_etfs:13,pending_etfs:5},disclosure:{short:'估算'}};
   else if (u.pathname.endsWith('/industries')) data={items:[{industry_code:'1',industry_name:'电子'}]};
   else if (u.pathname.endsWith('/rank')) data={total:1,has_more:false,items:[{rank:1,stock_code:'300750',stock_name:'宁德时代',flow:123}]};
   else if (u.pathname.endsWith('/stocks')) data={items:[{stock_code:'300750',stock_name:'宁德时代',flow_1d:123}],has_more:false};
@@ -39,7 +49,9 @@ globalThis.fetch = async url => { calls.push(String(url)); const u = new URL(Str
 };
 await import('../public/app.mjs');
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
-await settle(); assert.equal(nodes.get('trade-date').textContent, '2026-10-29');
+await settle(); assert.equal(nodes.get('trade-date').textContent, '2026-11-12（1,720只有记录）');
+assert.equal(nodes.get('refresh-time').textContent,'2026-11-11（1,694只有记录）');
+assert.equal(nodes.get('refresh-time').dateTime,'2026-11-11');
 assert.match(nodes.get('coverage').textContent, /已有 A 股披露持仓 13 只/);
 assert.equal(nodes.get('rank-list').children.length,1);
 nodes.get('rank-list').children[0].click(); await settle();

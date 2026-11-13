@@ -88,3 +88,60 @@ test('bounded watchlist distinguishes current from latest disclosure and missing
  assert.equal(unknown.status,'not_found');
  for(const query of ['', 'codes=bad', 'codes='+Array(31).fill('510300').join(',')]) assert.equal((await call(env,'/api/v1/history/watchlist?'+query)).status,400);
 });
+
+test('history metadata reports actual coverage dates without changing the query target',async()=>{
+ const env={BUCKET:new Bucket(),UPDATE_SECRET:'secret'};
+ const meta={...data.meta,version:'dates-v1',target_end:'2026-11-13',generated_at:'2026-11-13T08:00:00Z',total_funds:3};
+ const catalog={items:[
+  {...data.catalog.items[0],shares:{count:10,end:'2026-11-12'},nav:{count:10,end:'2026-11-12'},flow:{count:9,end:'2026-11-11'}},
+  {...data.catalog.items[1],shares:{count:10,end:'2026-11-12'},nav:{count:9,end:'2026-11-11'},flow:{count:9,end:'2026-11-11'}},
+  {fund_code:'511230',fund_name:'债券ETF',market:'SH',file:'data-0000',shares:{count:9,end:'2026-11-11'},nav:{count:4,end:'2026-11-12'}}
+ ]};
+ await env.BUCKET.put('history-latest.json',JSON.stringify({...manifest,version:meta.version,target_end:meta.target_end}));
+ await env.BUCKET.put('history/'+meta.version+'/meta.json',JSON.stringify(meta));
+ await env.BUCKET.put('history/'+meta.version+'/catalog.json',JSON.stringify(catalog));
+ const reads=[];
+ const get=env.BUCKET.get.bind(env.BUCKET);
+ env.BUCKET.get=key=>{reads.push(key);return get(key);};
+ const result=await call(env,'/api/v1/history/meta');
+ assert.equal(result.status,200);
+ assert.deepEqual(result.body.data,{
+  ...meta,
+  data_dates:{shares:{date:'2026-11-12',count:2},nav:{date:'2026-11-12',count:2},flow:{date:'2026-11-11',count:2}}
+ });
+ assert.deepEqual(reads,['history-latest.json','history/dates-v1/meta.json','history/dates-v1/catalog.json']);
+});
+
+test('history metadata keeps unavailable or invalid coverage dates unknown',async()=>{
+ const unknown={shares:{date:null,count:0},nav:{date:null,count:0},flow:{date:null,count:0}};
+ const meta={...data.meta,target_end:'2026-11-13',generated_at:'2026-11-13T08:00:00Z'};
+ const cases=[
+  {name:'legacy catalog without coverage',catalog:data.catalog},
+  {name:'legacy catalog without flow coverage',catalog:{items:[
+   {...data.catalog.items[0],shares:{count:2,end:'2026-11-12'},nav:{count:1,end:'2026-11-11'}},
+   {...data.catalog.items[1],shares:{count:2,end:'2026-11-12'},nav:null,flow:null}
+  ]},expected:{shares:{date:'2026-11-12',count:2},nav:{date:'2026-11-11',count:1},flow:{date:null,count:0}}},
+  {name:'empty catalog',catalog:{items:[]}},
+  {name:'missing catalog',catalog:null},
+  {name:'invalid catalog',catalog:{items:[{fund_code:'bad'}]}},
+  {name:'duplicate fund',catalog:{items:[data.catalog.items[0],data.catalog.items[0]]}},
+  {name:'invalid dates and empty counts',catalog:{items:[
+   {...data.catalog.items[0],shares:{count:1,end:'2026-11-14'},nav:{count:1,end:'2026-02-31'},flow:{count:0,end:'2026-11-12'}},
+   {...data.catalog.items[1],shares:{count:1,end:null},nav:{count:1,end:'2020-12-31'},flow:{count:1,end:''}}
+  ]}},
+  {name:'catalog read failure',throws:true}
+ ];
+ for(const sample of cases){
+  const env={BUCKET:new Bucket(),UPDATE_SECRET:'secret'};
+  await env.BUCKET.put('history-latest.json',JSON.stringify({...manifest,target_end:meta.target_end}));
+  await env.BUCKET.put('history/hv1/meta.json',JSON.stringify(meta));
+  if(sample.catalog)await env.BUCKET.put('history/hv1/catalog.json',JSON.stringify(sample.catalog));
+  if(sample.throws){
+   const get=env.BUCKET.get.bind(env.BUCKET);
+   env.BUCKET.get=key=>{if(key==='history/hv1/catalog.json')throw Error('unavailable');return get(key);};
+  }
+  const result=await call(env,'/api/v1/history/meta');
+  assert.equal(result.status,200,sample.name);
+  assert.deepEqual(result.body.data,{...meta,data_dates:sample.expected||unknown},sample.name);
+ }
+});

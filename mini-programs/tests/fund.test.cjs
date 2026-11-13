@@ -61,14 +61,17 @@ test('clipped inherited dates, true sessions and missing/zero values survive met
   assert.equal(page.data.end, dates[6]);
   assert.match(page.data.rangeNote, /2026-11-01 至 2026-11-10/);
   assert.equal(page.data.summaryValue, '12000 wan');
+  assert.equal(page.data.sourceDate,dates[2]);assert.match(page.data.sourceLabel,/本期.*净申赎截至/);
   assert.match(page.data.coverage, /7 个开市日，有值 2 日/);
   assert.deepEqual(Array.from(page.data.chart.rows, row => row.value), [0, null, 12000, null, null, null, null]);
   assert.equal(page.data.chart.opts.currency, true);
   metric(page, 'nav');
   assert.equal(page.data.chart.opts.currency, false);
   assert.equal(page.data.summaryValue, '2.12345678 元');
+  assert.equal(page.data.sourceDate,dates[6]);assert.equal(page.data.sourceLabel,'本期单位净值截至');
   metric(page, 'shares');
   assert.equal(page.data.summaryValue, '16000 份');
+  assert.equal(page.data.sourceDate,dates[2]);assert.equal(page.data.sourceLabel,'本期基金份额截至');
   assert.equal(page.data.chart.rows[6].value, null);
   assert.equal(calls.length, 3, 'switching a metric uses the same aligned snapshot');
   await page.toggleDetails();
