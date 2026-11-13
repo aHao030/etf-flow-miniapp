@@ -14,7 +14,7 @@
 
 ## 盘后和程序发版
 
-以下命令在 `mini-programs` 目录运行。使用项目已有 Python 和 Node。Windows 也可运行项目的 `双端更新.cmd`，参数与 `python scripts/release.py` 相同，直接双击显示当前记录。盘后自动化在北京时间交易日15:30至23:30每小时检查最新披露，内容未变复用已验证候选。页面显示实际数据所属日期，包内目标日继续用于查询范围和版本对账。
+以下命令在 `mini-programs` 目录运行。使用项目已有 Python 和 Node。Windows 也可运行项目的 `双端更新.cmd`，参数与 `python scripts/release.py` 相同，直接双击显示当前记录。盘后自动化在北京时间交易日15:30至22:30每小时检查最新披露，23:15进行夜间主补抓，内容未变复用已验证候选。页面显示实际数据所属日期，包内目标日继续用于查询范围和版本对账。
 
 ```powershell
 python scripts/release.py prepare
