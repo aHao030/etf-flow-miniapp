@@ -111,4 +111,89 @@ class Holdings(unittest.TestCase):
             db.execute("INSERT INTO fund_holdings(fund_code,status,stock_count,source,observed_at,error,collector_version) VALUES(?,'unavailable',0,'url','2026-11-10',?,?)",(code,error,version))
         self.assertEqual(module.transport_retry_codes(db),{'510300'})
 
+
+class HoldingsPersistence(unittest.TestCase):
+    def setUp(self):
+        self.db=sqlite3.connect(':memory:')
+        self.addCleanup(self.db.close)
+        module.ensure_schema(self.db)
+        self.source='https://fundf10.eastmoney.com/jjcc_510300.html'
+        self.old_hash='a'*64
+        self.observed='2026-11-10T13:30:12+08:00'
+        self.attempted='2026-11-17T21:45:00+08:00'
+        with self.db:
+            self.db.execute("""INSERT INTO fund_holdings VALUES(
+                '510300','partial','2026-06-30','latest_disclosed_positions',15,2,
+                ?,?,NULL,?,'[]',?)""",(self.source,self.observed,module.COLLECTOR_VERSION,self.old_hash))
+            self.db.executemany('INSERT INTO stock_weights VALUES(?,?,?,?,?,?)',[
+                ('510300','600519','stock A',.125,'2026-06-30',self.source),
+                ('510300','600000','stock B',.025,'2026-06-30',self.source)])
+
+    def disclosure(self):
+        return (self.db.execute('SELECT * FROM fund_holdings ORDER BY fund_code').fetchall(),
+                self.db.execute('SELECT * FROM stock_weights ORDER BY fund_code,stock_code').fetchall())
+
+    def failure(self, code='510300', identity_hash=None):
+        result=(code,None,[],None,'https://fundf10.eastmoney.com/jjcc_'+code+'.html',[],
+                'FetchError: source unavailable')
+        return module.record_result(self.db,result,'2026-11-17',self.attempted,identity_hash or self.old_hash)
+
+    def test_failed_refresh_preserves_exact_valid_report_weights_and_identity_time(self):
+        before=self.disclosure()
+        self.assertEqual(self.failure(identity_hash='b'*64),'retained_previous')
+        self.assertEqual(self.disclosure(),before)
+        self.assertEqual(self.db.execute('SELECT asof,attempted_at,error,identity_catalogue_hash,retained_previous FROM holding_failures').fetchone(),
+            ('2026-11-17',self.attempted,'FetchError: source unavailable','b'*64,1))
+
+    def test_failed_refresh_preserves_verified_no_ashare_report(self):
+        with self.db:
+            self.db.execute('DELETE FROM stock_weights')
+            self.db.execute("UPDATE fund_holdings SET status='no_ashare_holdings',coverage_pct=0,stock_count=0")
+        before=self.disclosure()
+        self.assertEqual(self.failure(),'retained_previous')
+        self.assertEqual(self.disclosure(),before)
+
+    def test_failed_new_fund_remains_unavailable_not_a_zero_holdings_report(self):
+        self.assertEqual(self.failure('510500'),'unavailable')
+        self.assertEqual(self.db.execute("SELECT status,report_date,coverage_pct,stock_count,error FROM fund_holdings WHERE fund_code='510500'").fetchone(),
+            ('unavailable',None,None,0,'FetchError: source unavailable'))
+        self.assertEqual(self.db.execute("SELECT retained_previous FROM holding_failures WHERE fund_code='510500'").fetchone()[0],0)
+        self.assertNotIn('510500',module.reusable_codes(self.db,'2026-11-17',7,self.old_hash))
+
+    def test_invalid_old_weight_is_not_retained_as_a_verified_disclosure(self):
+        with self.db:self.db.execute("UPDATE stock_weights SET weight=0 WHERE stock_code='600519'")
+        self.assertEqual(self.failure(),'unavailable')
+        self.assertEqual(self.db.execute('SELECT count(*) FROM stock_weights').fetchone()[0],0)
+        self.assertEqual(self.db.execute('SELECT retained_previous FROM holding_failures').fetchone()[0],0)
+
+    def test_inclusive_seven_day_cache_and_failed_attempt_do_not_extend_observation(self):
+        self.assertIn('510300',module.reusable_codes(self.db,'2026-11-17',7,self.old_hash))
+        self.assertNotIn('510300',module.reusable_codes(self.db,'2026-11-18',7,self.old_hash))
+        self.failure()
+        self.assertEqual(self.db.execute('SELECT observed_at FROM fund_holdings').fetchone()[0],self.observed)
+        self.assertNotIn('510300',module.reusable_codes(self.db,'2026-11-17',7,self.old_hash))
+        self.assertEqual(module.transport_retry_codes(self.db),{'510300'})
+
+    def test_later_success_atomically_replaces_single_period_and_clears_retry(self):
+        self.failure()
+        result=('510300','2026-09-30',[('600777','stock C',.08)],8,self.source,[],None)
+        later='2026-11-17T22:30:00+08:00'
+        self.assertEqual(module.record_result(self.db,result,'2026-11-17',later,'b'*64),'partial')
+        self.assertEqual(self.db.execute('SELECT stock_code,weight,report_date FROM stock_weights').fetchall(),
+            [('600777',.08,'2026-09-30')])
+        self.assertEqual(self.db.execute('SELECT observed_at,identity_catalogue_hash,coverage_pct FROM fund_holdings').fetchone(),(later,'b'*64,8))
+        self.assertEqual(self.db.execute('SELECT count(*) FROM holding_failures').fetchone()[0],0)
+        self.assertEqual(module.transport_retry_codes(self.db),set())
+        self.assertIn('510300',module.reusable_codes(self.db,'2026-11-17',7,'b'*64))
+
+    def test_failed_atomic_replacement_keeps_previous_report_and_retry_evidence(self):
+        self.failure()
+        before=self.disclosure()
+        failures=self.db.execute('SELECT * FROM holding_failures').fetchall()
+        duplicate=('510300','2026-09-30',[('600777','C',.04),('600777','C',.04)],8,self.source,[],None)
+        with self.assertRaises(sqlite3.IntegrityError):
+            module.record_result(self.db,duplicate,'2026-11-17',self.attempted,self.old_hash)
+        self.assertEqual(self.disclosure(),before)
+        self.assertEqual(self.db.execute('SELECT * FROM holding_failures').fetchall(),failures)
+
 if __name__=='__main__': unittest.main()

@@ -42,6 +42,11 @@ CREATE TABLE IF NOT EXISTS stock_weights(fund_code TEXT NOT NULL,stock_code TEXT
 stock_name TEXT NOT NULL,weight REAL NOT NULL,report_date TEXT NOT NULL,source TEXT NOT NULL,
 PRIMARY KEY(fund_code,stock_code));
 CREATE INDEX IF NOT EXISTS weights_by_stock ON stock_weights(stock_code,fund_code);
+CREATE TABLE IF NOT EXISTS holding_failures(
+fund_code TEXT PRIMARY KEY,asof TEXT NOT NULL,attempted_at TEXT NOT NULL,
+error TEXT NOT NULL,collector_version INTEGER NOT NULL,
+identity_catalogue_hash TEXT NOT NULL,retained_previous INTEGER NOT NULL,
+selection_notes TEXT NOT NULL);
 '''
 
 
@@ -135,7 +140,68 @@ def identity_codes(db, legacy_codes):
 
 
 def transport_retry_codes(db):
-    return {r[0] for r in db.execute("SELECT fund_code FROM fund_holdings WHERE collector_version=? AND status='unavailable' AND error LIKE 'FetchError:%'",(COLLECTOR_VERSION,))}
+    return {r[0] for r in db.execute("""SELECT fund_code FROM fund_holdings
+        WHERE collector_version=? AND status='unavailable' AND error LIKE 'FetchError:%'
+        UNION SELECT fund_code FROM holding_failures
+        WHERE collector_version=? AND error LIKE 'FetchError:%'""",
+        (COLLECTOR_VERSION,COLLECTOR_VERSION))}
+
+
+def reusable_codes(db, asof, max_age_days, identity_hash):
+    cache_start=(date.fromisoformat(asof)-timedelta(days=max_age_days)).isoformat()
+    return {r[0] for r in db.execute("""SELECT h.fund_code FROM fund_holdings h
+        WHERE substr(h.observed_at,1,10)>=? AND substr(h.observed_at,1,10)<=?
+        AND h.status!='unavailable' AND h.report_date IS NOT NULL
+        AND h.collector_version=? AND h.identity_catalogue_hash=?
+        AND NOT EXISTS (SELECT 1 FROM holding_failures f WHERE f.fund_code=h.fund_code
+            AND f.asof<=? AND f.attempted_at>=h.observed_at)""",
+        (cache_start,asof,COLLECTOR_VERSION,identity_hash,asof))}
+
+
+def verified_previous(db, code, asof):
+    """Retain only an internally consistent, previously verified disclosure."""
+    row=db.execute("""SELECT status,report_date,coverage_pct,stock_count,source,
+        observed_at,error,collector_version,identity_catalogue_hash
+        FROM fund_holdings WHERE fund_code=?""",(code,)).fetchone()
+    if row is None: return False
+    status,report,coverage,count,source,observed,error,version,identity_hash=row
+    try:
+        if (status not in ('partial','no_ashare_holdings') or error is not None
+                or version!=COLLECTOR_VERSION or not re.fullmatch(r'[0-9a-f]{64}',identity_hash)
+                or source!='https://fundf10.eastmoney.com/jjcc_'+code+'.html'
+                or date.fromisoformat(report).isoformat()!=report or report>asof
+                or datetime.fromisoformat(observed).tzinfo is None or observed[:10]>asof):
+            return False
+        weights=db.execute('SELECT stock_code,weight,report_date,source FROM stock_weights WHERE fund_code=?',(code,)).fetchall()
+        if len(weights)!=count or (status=='partial')!=bool(weights): return False
+        if any(not re.fullmatch(r'\d{6}',stock) or not math.isfinite(weight) or not 0<weight<=1
+               or day!=report or url!=source for stock,weight,day,url in weights): return False
+        total=sum(r[1] for r in weights)*100
+        return math.isfinite(coverage) and total<=105 and abs(total-coverage)<1e-5
+    except (TypeError,ValueError):
+        return False
+
+
+def record_result(db, result, asof, observed, identity_hash):
+    code,report_date,positions,coverage,source,selection_notes,error=result
+    status='unavailable' if error else 'partial' if positions else 'no_ashare_holdings'
+    with db:
+        if error:
+            retained=verified_previous(db,code,asof)
+            db.execute('INSERT OR REPLACE INTO holding_failures VALUES(?,?,?,?,?,?,?,?)',
+                (code,asof,observed,error,COLLECTOR_VERSION,identity_hash,int(retained),
+                 json.dumps(selection_notes,ensure_ascii=False)))
+            if retained:
+                # The failed attempt is not a new observation of the old report.
+                # Preserve its report date, verification time, identity hash and
+                # exact weights; the separate failure keeps it eligible for retry.
+                return 'retained_previous'
+        db.execute('INSERT OR REPLACE INTO fund_holdings(fund_code,status,report_date,holdings_type,coverage_pct,stock_count,source,observed_at,error,collector_version,selection_notes,identity_catalogue_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',(code,status,report_date,'broader_disclosure' if len(positions)>10 else 'latest_disclosed_positions',coverage,len(positions),source,observed,error,COLLECTOR_VERSION,json.dumps(selection_notes,ensure_ascii=False),identity_hash))
+        db.execute('DELETE FROM stock_weights WHERE fund_code=?',(code,))
+        db.executemany('INSERT INTO stock_weights VALUES(?,?,?,?,?,?)',[(code,stock,name,weight,report_date,source) for stock,name,weight in positions])
+        if not error:
+            db.execute('DELETE FROM holding_failures WHERE fund_code=?',(code,))
+    return status
 
 
 def response_cache_path(cache_dir,code,year,month):
@@ -239,28 +305,23 @@ def main():
         raise ValueError('Full A-share identity catalogue is unavailable')
     identity_hash=hashlib.sha256('\n'.join(sorted(known)).encode('ascii')).hexdigest()
     observed=datetime.now(ZoneInfo('Asia/Shanghai')).isoformat(timespec='seconds')
-    cache_start=(date.fromisoformat(args.asof)-timedelta(days=args.max_age_days)).isoformat()
-    done={r[0] for r in db.execute("SELECT fund_code FROM fund_holdings WHERE substr(observed_at,1,10)>=? AND substr(observed_at,1,10)<=? AND status!='unavailable' AND report_date IS NOT NULL AND collector_version=? AND identity_catalogue_hash=?",(cache_start,args.asof,COLLECTOR_VERSION,identity_hash))}
+    done=reusable_codes(db,args.asof,args.max_age_days,identity_hash)
     todo=codes if args.refresh else [code for code in codes if code not in done]
     if args.retry_transport_only:
         if args.refresh: raise ValueError('refresh cannot be combined with targeted retry')
         failed=transport_retry_codes(db)
         todo=[code for code in codes if code in failed]
     print(json.dumps({'total_etfs':len(codes),'identity_stocks':len(known),'already_checked':len(done),'to_fetch':len(todo),'profile':COLLECTOR_VERSION}),flush=True)
+    retained_previous=0
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures=[pool.submit(fetch_one,code,known,args.asof,args.response_cache,args.max_age_days) for code in todo]
         for count,future in enumerate(as_completed(futures),1):
-            code,report_date,positions,coverage,source,selection_notes,error=future.result()
-            status='unavailable' if error else 'partial' if positions else 'no_ashare_holdings'
-            with db:
-                db.execute('INSERT OR REPLACE INTO fund_holdings(fund_code,status,report_date,holdings_type,coverage_pct,stock_count,source,observed_at,error,collector_version,selection_notes,identity_catalogue_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',(code,status,report_date,'broader_disclosure' if len(positions)>10 else 'latest_disclosed_positions',coverage,len(positions),source,observed,error,COLLECTOR_VERSION,json.dumps(selection_notes,ensure_ascii=False),identity_hash))
-                # A failed refresh cannot silently retain obsolete weights as current.
-                db.execute('DELETE FROM stock_weights WHERE fund_code=?',(code,))
-                db.executemany('INSERT INTO stock_weights VALUES(?,?,?,?,?,?)',[(code,stock,name,weight,report_date,source) for stock,name,weight in positions])
+            outcome=record_result(db,future.result(),args.asof,observed,identity_hash)
+            retained_previous+=int(outcome=='retained_previous')
             if count%50==0 or count==len(todo):
                 counts=dict(db.execute('SELECT status,count(*) FROM fund_holdings GROUP BY status'))
                 print(json.dumps({'processed':count,'of':len(todo),'counts':counts,'profile':COLLECTOR_VERSION,'upgraded_funds':db.execute('SELECT count(*) FROM fund_holdings WHERE collector_version=?',(COLLECTOR_VERSION,)).fetchone()[0],'distinct_stocks':db.execute('SELECT COUNT(DISTINCT stock_code) FROM stock_weights').fetchone()[0],'weights':db.execute('SELECT COUNT(*) FROM stock_weights').fetchone()[0],'excluded_reports':sum(len(json.loads(r[0])) for r in db.execute('SELECT selection_notes FROM fund_holdings WHERE collector_version=?',(COLLECTOR_VERSION,)))}),flush=True)
-    print(json.dumps({'funds':db.execute('SELECT COUNT(*) FROM fund_holdings').fetchone()[0], 'weights':db.execute('SELECT COUNT(*) FROM stock_weights').fetchone()[0], 'stocks':db.execute('SELECT COUNT(DISTINCT stock_code) FROM stock_weights').fetchone()[0]}),flush=True)
+    print(json.dumps({'funds':db.execute('SELECT COUNT(*) FROM fund_holdings').fetchone()[0], 'weights':db.execute('SELECT COUNT(*) FROM stock_weights').fetchone()[0], 'stocks':db.execute('SELECT COUNT(DISTINCT stock_code) FROM stock_weights').fetchone()[0], 'retained_previous':retained_previous, 'failed_attempts':db.execute('SELECT COUNT(*) FROM holding_failures').fetchone()[0]}),flush=True)
     db.close()
 
 
